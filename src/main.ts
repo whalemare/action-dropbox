@@ -1,5 +1,6 @@
+import { join } from 'path'
+
 import * as core from '@actions/core'
-import { join } from 'node:path'
 
 import { DropboxUploader } from './upload/dropbox/DropboxUploader'
 import { uploadBatch } from './upload/uploadBatch'
