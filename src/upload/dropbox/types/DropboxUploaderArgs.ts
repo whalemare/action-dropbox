@@ -1,4 +1,4 @@
-import { Logger } from '../../utils/Logger'
+import { Logger } from '../../../utils/Logger'
 
 export interface DropboxUploaderArgs {
   accessToken: string

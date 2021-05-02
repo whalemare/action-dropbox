@@ -135,7 +135,8 @@ var __rest = (this && this.__rest) || function (s, e) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DropboxUploader = void 0;
-const fs = __importStar(__webpack_require__(9225));
+const fsRaw = __importStar(__webpack_require__(5747));
+const fs = fsRaw.promises;
 const dropbox_1 = __webpack_require__(8939);
 /**
  * 8Mb - Dropbox JavaScript API suggested max file / chunk size
@@ -14736,14 +14737,6 @@ module.exports = require("events");;
 
 "use strict";
 module.exports = require("fs");;
-
-/***/ }),
-
-/***/ 9225:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("fs/promises");;
 
 /***/ }),
 

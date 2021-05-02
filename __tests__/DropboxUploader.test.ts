@@ -1,4 +1,6 @@
-import * as fs from 'fs/promises'
+import * as fsRaw from 'fs'
+
+const fs = fsRaw.promises
 
 import { DropboxUploader } from '../src/upload/dropbox/DropboxUploader'
 import { uploadBatch } from '../src/upload/uploadBatch'

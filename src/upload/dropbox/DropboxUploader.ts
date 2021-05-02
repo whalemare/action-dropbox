@@ -1,12 +1,13 @@
-import * as fs from 'fs/promises'
+import * as fsRaw from 'fs'
+const fs = fsRaw.promises
 
 import { Dropbox } from 'dropbox'
 
 import { Logger } from '../../utils/Logger'
 import { UploadArgs, Uploader } from '../Uploader'
 
-import { DropboxUploaderArgs } from './DropboxUploaderArgs'
-import { StreamUploader } from './StreamUploader'
+import { DropboxUploaderArgs } from './types/DropboxUploaderArgs'
+import { StreamUploader } from './types/StreamUploader'
 
 /**
  * 8Mb - Dropbox JavaScript API suggested max file / chunk size

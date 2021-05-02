@@ -1,7 +1,4 @@
-export interface Uploader {
-  buffer: Buffer
-  destination: string
-}
+import { Uploader } from './Uploader'
 
 export type StreamUploader = {
   onProgress?: (uploaded: number, total: number) => void
