@@ -1,6 +1,9 @@
 name: 'Dropbox Uploader'
 description: 'Upload files to Dropbox. Support files up to 150 Gb: smallFile < 150Mb <= largeFile <=150Gb'
 author: 'whalemare'
+branding:
+  icon: upload-cloud
+  color: yellow
 inputs:
   accessToken:
     required: true
