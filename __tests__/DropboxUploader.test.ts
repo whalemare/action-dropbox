@@ -110,4 +110,8 @@ describe.skip('upload', () => {
     },
     60 * 1000,
   )
+
+  // test('download', () => {
+  //   new Dropbox({accessToken}).
+  // })
 })

@@ -28,34 +28,34 @@ export class DropboxUploader implements Uploader {
    * Upload file to Dropbox
    */
   upload = async ({ file, ...uploadArgs }: UploadArgs) => {
-    try {
-      // 150 Mb Dropbox restriction to max file for uploading
-      const UPLOAD_FILE_SIZE_LIMIT = 150 * 1024 * 1024
-      const destination = uploadArgs.destination || `/${file}`
-      const buffer = await fs.readFile(file)
+    // 150 Mb Dropbox restriction to max file for uploading
+    const UPLOAD_FILE_SIZE_LIMIT = 150 * 1024 * 1024
+    const destination = uploadArgs.destination || `/${file}`
+    const buffer = await fs.readFile(file)
 
-      this.logger?.debug(`Upload ${file} -> ${destination}: ${buffer.length} Bytes`)
-      if (buffer.length < UPLOAD_FILE_SIZE_LIMIT) {
-        const response = await this.dropbox.filesUpload({
-          path: destination,
-          contents: buffer,
-          mode: { '.tag': 'overwrite' },
-        })
-        this.logger?.info(`Uploaded: ${file} with id ${response.result.id}`)
+    if (buffer.length <= 0) {
+      this.logger?.warn(`Skip file: ${file}, because it size is ${buffer.length}`)
+      return ''
+    }
 
-        return response.result.id
-      } else {
-        return this.uploadStream({
-          buffer,
-          destination,
-          onProgress: (uploaded, total) => {
-            this.logger?.info(`Uploaded ${(uploaded / total) * 100}% ${file}`)
-          },
-        })
-      }
-    } catch (e: unknown) {
-      this.logger?.error(e as string)
-      throw e
+    this.logger?.debug(`Upload ${file} -> ${destination}: ${buffer.length} Bytes`)
+    if (buffer.length < UPLOAD_FILE_SIZE_LIMIT) {
+      const response = await this.dropbox.filesUpload({
+        path: destination,
+        contents: buffer,
+        mode: { '.tag': 'overwrite' },
+      })
+      this.logger?.info(`Uploaded: ${file} with id ${response.result.id}`)
+
+      return response.result.id
+    } else {
+      return this.uploadStream({
+        buffer,
+        destination,
+        onProgress: (uploaded, total) => {
+          this.logger?.info(`Uploaded ${(uploaded / total) * 100}% ${file}`)
+        },
+      })
     }
   }
 
