@@ -84,6 +84,11 @@ export class DropboxUploader implements Uploader {
    * @returns
    */
   uploadStream = async ({ buffer, destination, partSizeBytes = DROPBOX_MAX_BLOB_SIZE, onProgress }: StreamUploader) => {
+    if (buffer.length <= 0) {
+      this.logger?.warn(`Skip, because it size is ${buffer.length}`)
+      return ''
+    }
+
     const partSize = Math.min(partSizeBytes, DROPBOX_MAX_BLOB_SIZE)
 
     const blobs = []
@@ -133,6 +138,7 @@ export class DropboxUploader implements Uploader {
               contents: blob,
             })
             .then((it) => {
+              this.logger?.info(`result uploading: ${JSON.stringify(it.result)}`)
               return it.result.id
             })
         })
