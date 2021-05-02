@@ -1,8 +1,8 @@
 {
-  "name": "typescript-action",
-  "version": "0.0.0",
+  "name": "dropbox-uploader",
+  "version": "1.0.0",
   "private": true,
-  "description": "TypeScript template action",
+  "description": "Upload files to Dropbox. Support files up to 150 Gb: smallFile < 150Mb <= largeFile <=150Gb",
   "main": "lib/main.js",
   "scripts": {
     "watch": "tsc --watch",
@@ -12,18 +12,25 @@
     "lint": "eslint src/**/*.ts",
     "package": "ncc build --source-map --license licenses.txt",
     "test": "jest",
-    "all": "npm run build && npm run format && npm run lint && npm run package && npm test"
+    "all": "npm run build && npm run format && npm run lint && npm run package"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/typescript-action.git"
+    "url": "git+https://github.com/whalemare/action-dropbox"
   },
   "keywords": [
     "actions",
-    "node",
-    "setup"
+    "dropbox",
+    "dropbox-uploader",
+    "uploader",
+    "upload",
+    "cloud",
+    "storage",
+    "file",
+    "typescript",
+    "ts"
   ],
-  "author": "",
+  "author": "whalemare",
   "license": "MIT",
   "dependencies": {
     "@actions/core": "1.2.7",
