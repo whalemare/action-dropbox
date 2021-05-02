@@ -41,11 +41,12 @@ const core = __importStar(__webpack_require__(2186));
 const DropboxUploader_1 = __webpack_require__(1574);
 const uploadBatch_1 = __webpack_require__(1268);
 const getInputs_1 = __webpack_require__(515);
-const { accessToken, destination, file, pattern } = getInputs_1.getInputs({
+const { accessToken, file, destination, pattern, displayProgress = false } = getInputs_1.getInputs({
     accessToken: 'string',
     pattern: 'string?',
     file: 'string?',
     destination: 'string?',
+    displayProgress: 'boolean?',
 });
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -57,12 +58,14 @@ function run() {
                 const fileId = yield dropbox.uploadStream({
                     buffer,
                     destination: destination || file,
-                    onProgress: (current, total) => {
-                        const percent = Math.round((current / total) * 100);
-                        core.info(`Uploading ${percent}%: ${file}`);
-                    },
+                    onProgress: displayProgress
+                        ? (current, total) => {
+                            const percent = Math.round((current / total) * 100);
+                            core.info(`Uploading ${percent}%: ${file}`);
+                        }
+                        : undefined,
                 });
-                core.info(`Success uploading ${file} -> ${fileId}`);
+                core.info(`Uploaded: ${file} -> ${fileId}`);
                 uploadedFiles.push(fileId);
             }));
         }
@@ -78,7 +81,7 @@ function run() {
 }
 run()
     .then((files) => {
-    core.info('Success');
+    core.info(`Success ${JSON.stringify(files)}`);
     core.setOutput('files', files);
 })
     .catch((e) => {
