@@ -18,6 +18,13 @@ async function run() {
   const dropbox = DropboxUploader.create({ accessToken })
   const uploadedFiles: string[] = []
 
+  core.startGroup('input args')
+  core.debug(`pattern ${pattern}`)
+  core.debug(`file ${file}`)
+  core.debug(`destination ${destination}`)
+  core.debug(`displayProgress ${displayProgress ? 'true' : 'false'}`)
+  core.endGroup()
+
   if (pattern) {
     await uploadBatch(pattern, async (file) => {
       const buffer = await fs.promises.readFile(file)
