@@ -1,4 +1,4 @@
-import * as fs from 'fs/promises'
+import * as fs from 'fs'
 
 import * as core from '@actions/core'
 
@@ -19,7 +19,7 @@ async function run() {
 
   if (pattern) {
     await uploadBatch(pattern, async (file) => {
-      const buffer = await fs.readFile(file)
+      const buffer = await fs.promises.readFile(file)
       const fileId = await dropbox.uploadStream({
         buffer,
         destination: destination || file,
