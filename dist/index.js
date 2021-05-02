@@ -298,7 +298,6 @@ class DropboxUploader {
             const sessions = {};
             const promises = files.map((file) => __awaiter(this, void 0, void 0, function* () {
                 var e_2, _c;
-                var _d;
                 const fileStat = fsRaw.statSync(file);
                 const fileSize = fileStat.size;
                 if (fileSize > 0) {
@@ -309,41 +308,33 @@ class DropboxUploader {
                         for (var fileStream_2 = __asyncValues(fileStream), fileStream_2_1; fileStream_2_1 = yield fileStream_2.next(), !fileStream_2_1.done;) {
                             const chunk = fileStream_2_1.value;
                             const isLastChunk = uploaded + chunk.length === fileSize;
-                            (_d = this.logger) === null || _d === void 0 ? void 0 : _d.debug(`
-            File ${file}
-            filesize: ${fileSize}
-            sessionId: ${sessionId}
-            uploaded: ${uploaded}
-            chunk: ${chunk.length}
-            isLastChunk: ${isLastChunk}
-          `);
+                            // this.logger?.debug(`
+                            //   File ${file}
+                            //   filesize: ${fileSize}
+                            //   sessionId: ${sessionId}
+                            //   uploaded: ${uploaded}
+                            //   chunk: ${chunk.length}
+                            //   isLastChunk: ${isLastChunk}
+                            // `)
                             if (sessionId === undefined) {
-                                yield retry_1.shouldRetry(() => __awaiter(this, void 0, void 0, function* () {
+                                yield retryWhenTooManyRequests(() => __awaiter(this, void 0, void 0, function* () {
                                     sessionId = (yield this.dropbox.filesUploadSessionStart({ contents: chunk, close: isLastChunk })).result
                                         .session_id;
                                     sessions[file] = {
                                         sessionId: sessionId,
                                         fileSize: fileSize,
                                     };
-                                }), (error) => __awaiter(this, void 0, void 0, function* () {
-                                    var _e, _f, _g, _h;
-                                    if ((_e = error.error) === null || _e === void 0 ? void 0 : _e.retry_after) {
-                                        (_f = this.logger) === null || _f === void 0 ? void 0 : _f.warn(`Error: ${error}: wait ${(_g = error.error) === null || _g === void 0 ? void 0 : _g.retry_after}`);
-                                        yield delay_1.delay((_h = error.error) === null || _h === void 0 ? void 0 : _h.retry_after);
-                                    }
-                                    else {
-                                        yield delay_1.delay(100);
-                                    }
-                                    return true;
-                                }), 5);
+                                }));
                             }
                             else {
-                                yield this.dropbox.filesUploadSessionAppendV2({
-                                    // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
-                                    cursor: { session_id: sessionId, offset: uploaded },
-                                    contents: chunk,
-                                    close: isLastChunk,
-                                });
+                                yield retryWhenTooManyRequests(() => __awaiter(this, void 0, void 0, function* () {
+                                    return this.dropbox.filesUploadSessionAppendV2({
+                                        // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
+                                        cursor: { session_id: sessionId, offset: uploaded },
+                                        contents: chunk,
+                                        close: isLastChunk,
+                                    });
+                                }));
                             }
                             uploaded += chunk.length;
                             onProgress === null || onProgress === void 0 ? void 0 : onProgress(uploaded, fileSize, file);
@@ -397,6 +388,20 @@ class DropboxUploader {
     }
 }
 exports.DropboxUploader = DropboxUploader;
+const retryWhenTooManyRequests = (func) => __awaiter(void 0, void 0, void 0, function* () {
+    return retry_1.shouldRetry(func, (error) => __awaiter(void 0, void 0, void 0, function* () {
+        var _a, _b, _c, _d, _e, _f;
+        console.warn(`error = ${JSON.stringify(error)}`);
+        if ((_b = (_a = error.error) === null || _a === void 0 ? void 0 : _a.error) === null || _b === void 0 ? void 0 : _b.retry_after) {
+            console.warn(`Error: ${error}: wait ${(_d = (_c = error.error) === null || _c === void 0 ? void 0 : _c.error) === null || _d === void 0 ? void 0 : _d.retry_after}`);
+            yield delay_1.delay((_f = (_e = error.error) === null || _e === void 0 ? void 0 : _e.error) === null || _f === void 0 ? void 0 : _f.retry_after);
+        }
+        else {
+            yield delay_1.delay(1000);
+        }
+        return true;
+    }), 5);
+});
 
 
 /***/ }),
@@ -421,6 +426,7 @@ function delay(timeout = 1000) {
     return __awaiter(this, void 0, void 0, function* () {
         if (timeout === 0)
             return Promise.resolve();
+        console.warn(`delay ${timeout}`);
         return new Promise((resolver) => setTimeout(resolver, timeout));
     });
 }
