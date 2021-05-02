@@ -35,11 +35,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const path_1 = __webpack_require__(5622);
 const core = __importStar(__webpack_require__(2186));
+const globby_1 = __importDefault(__webpack_require__(3398));
 const DropboxUploader_1 = __webpack_require__(1574);
-const uploadBatch_1 = __webpack_require__(1268);
 const getInputs_1 = __webpack_require__(515);
 const { accessToken, file, destination, pattern, displayProgress = false, partSizeBytes = 1024 } = getInputs_1.getInputs({
     accessToken: 'string',
@@ -62,31 +65,29 @@ function run() {
         core.endGroup();
         if (pattern) {
             yield core.group(`uploading batch ${pattern}`, () => __awaiter(this, void 0, void 0, function* () {
-                return uploadBatch_1.uploadBatch(pattern, (file) => __awaiter(this, void 0, void 0, function* () {
-                    const fileId = yield dropbox.uploadStream({
-                        file,
-                        partSizeBytes: partSizeBytes,
-                        destination: path_1.join(destination, file),
-                        onProgress: displayProgress
-                            ? (current, total) => {
-                                const percent = Math.round((current / total) * 100);
-                                core.info(`Uploading ${percent}%: ${file}`);
-                            }
-                            : undefined,
-                    });
-                    core.info(`Uploaded: ${file} -> ${fileId}`);
-                    uploadedFiles.push(fileId);
-                }));
+                const files = yield globby_1.default(pattern);
+                yield dropbox.uploadFiles(files, destination, {
+                    onProgress: (current, total, file) => {
+                        const percent = Math.round((current / total) * 100);
+                        if (displayProgress) {
+                            core.info(`Uploading ${percent}%: ${file}`);
+                        }
+                        else if (percent === 100) {
+                            core.info(`Uploaded: ${file}`);
+                            files.push(file);
+                        }
+                    },
+                    partSizeBytes: partSizeBytes,
+                });
             }));
         }
         if (file) {
-            const fileId = yield dropbox.upload({
+            yield dropbox.upload({
                 file: file,
                 destination: path_1.join(destination, file),
             });
-            uploadedFiles.push(fileId);
+            uploadedFiles.push(file);
         }
-        return uploadedFiles;
     });
 }
 run()
@@ -156,8 +157,9 @@ var __asyncValues = (this && this.__asyncValues) || function (o) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DropboxUploader = void 0;
 const fsRaw = __importStar(__webpack_require__(5747));
-const fs = fsRaw.promises;
+const path_1 = __webpack_require__(5622);
 const dropbox_1 = __webpack_require__(8939);
+const fs = fsRaw.promises;
 /**
  * 8Mb - Dropbox JavaScript API suggested max file / chunk size
  */
@@ -217,14 +219,14 @@ class DropboxUploader {
             return response.result.id;
         });
         /**
-         * Upload file larger than 150Mb or for batch uploading
+         * Upload file larger than 150Mb
          *
          * @param buffer file content
          * @param destination file name on dropbox. Should be started from /
          * @param onProgress optional function that indicate progress
          * @returns
          */
-        this.uploadStream = ({ file, destination, partSizeBytes = DROPBOX_MAX_BLOB_SIZE, onProgress }) => __awaiter(this, void 0, void 0, function* () {
+        this.uploadStream = ({ file, destination, partSizeBytes = DROPBOX_MAX_BLOB_SIZE, onProgress, }) => __awaiter(this, void 0, void 0, function* () {
             var e_1, _a;
             var _b;
             const fileStream = fsRaw.createReadStream(file, { highWaterMark: partSizeBytes });
@@ -245,9 +247,10 @@ class DropboxUploader {
                             // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
                             cursor: { session_id: sessionId, offset: uploaded },
                             contents: chunk,
+                            close: false,
                         });
                     }
-                    onProgress === null || onProgress === void 0 ? void 0 : onProgress(uploaded, size);
+                    onProgress === null || onProgress === void 0 ? void 0 : onProgress(uploaded, size, file);
                     uploaded += chunk.length;
                 }
             }
@@ -266,14 +269,100 @@ class DropboxUploader {
                     commit: { path: destination, mode: { '.tag': 'overwrite' } },
                     contents: '',
                 });
-                onProgress === null || onProgress === void 0 ? void 0 : onProgress(uploaded, size);
+                onProgress === null || onProgress === void 0 ? void 0 : onProgress(uploaded, size, file);
                 return response.result.id;
             }
             else {
-                onProgress === null || onProgress === void 0 ? void 0 : onProgress(uploaded, size);
+                onProgress === null || onProgress === void 0 ? void 0 : onProgress(uploaded, size, file);
                 (_b = this.logger) === null || _b === void 0 ? void 0 : _b.warn(`Skip ${file}, because it has empty content`);
                 return '';
             }
+        });
+        /**
+         * Batch file uploading
+         *
+         * @param files
+         * @param destination
+         */
+        this.uploadFiles = (files, destination, { onProgress, partSizeBytes = DROPBOX_MAX_BLOB_SIZE } = {}) => __awaiter(this, void 0, void 0, function* () {
+            const sessions = {};
+            const promises = files.map((file) => __awaiter(this, void 0, void 0, function* () {
+                var e_2, _c;
+                var _d;
+                const fileStat = fsRaw.statSync(file);
+                const fileSize = fileStat.size;
+                if (fileSize > 0) {
+                    const fileStream = fsRaw.createReadStream(file, { highWaterMark: partSizeBytes });
+                    let sessionId = undefined;
+                    let uploaded = 0;
+                    try {
+                        for (var fileStream_2 = __asyncValues(fileStream), fileStream_2_1; fileStream_2_1 = yield fileStream_2.next(), !fileStream_2_1.done;) {
+                            const chunk = fileStream_2_1.value;
+                            const isLastChunk = uploaded + chunk.length === fileSize;
+                            (_d = this.logger) === null || _d === void 0 ? void 0 : _d.debug(`
+            File ${file}
+            filesize: ${fileSize}
+            sessionId: ${sessionId}
+            uploaded: ${uploaded}
+            chunk: ${chunk.length}
+            isLastChunk: ${isLastChunk}
+          `);
+                            if (sessionId === undefined) {
+                                sessionId = (yield this.dropbox.filesUploadSessionStart({ contents: chunk, close: isLastChunk })).result
+                                    .session_id;
+                                sessions[file] = {
+                                    sessionId: sessionId,
+                                    fileSize: fileSize,
+                                };
+                            }
+                            else {
+                                yield this.dropbox.filesUploadSessionAppendV2({
+                                    // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
+                                    cursor: { session_id: sessionId, offset: uploaded },
+                                    contents: chunk,
+                                    close: isLastChunk,
+                                });
+                            }
+                            uploaded += chunk.length;
+                            onProgress === null || onProgress === void 0 ? void 0 : onProgress(uploaded, fileSize, file);
+                        }
+                    }
+                    catch (e_2_1) { e_2 = { error: e_2_1 }; }
+                    finally {
+                        try {
+                            if (fileStream_2_1 && !fileStream_2_1.done && (_c = fileStream_2.return)) yield _c.call(fileStream_2);
+                        }
+                        finally { if (e_2) throw e_2.error; }
+                    }
+                }
+            }));
+            yield Promise.all(promises);
+            yield this.dropbox.filesUploadSessionFinishBatch({
+                // @ts-ignore incorrect typing with contents
+                entries: files.map((file) => {
+                    return {
+                        commit: {
+                            path: path_1.join(destination, file),
+                            mode: { '.tag': 'overwrite' },
+                        },
+                        cursor: {
+                            session_id: sessions[file].sessionId,
+                            offset: sessions[file].fileSize,
+                        },
+                    };
+                }),
+            });
+            // TODO: wait processing flag
+            // console.log('response', response.result)
+            // let repeat = 5
+            // while (repeat-- >= 0) {
+            //   const respose = await this.dropbox.filesUploadSessionFinishBatchCheck({
+            //     // @ts-ignore
+            //     async_job_id: response.result.async_job_id,
+            //   })
+            //   console.log('response checking', JSON.stringify(respose.result))
+            //   await new Promise((r) => setTimeout(r, 2500))
+            // }
         });
     }
     /**
@@ -286,45 +375,6 @@ class DropboxUploader {
     }
 }
 exports.DropboxUploader = DropboxUploader;
-
-
-/***/ }),
-
-/***/ 1268:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-"use strict";
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.uploadBatch = void 0;
-const globby_1 = __importDefault(__webpack_require__(3398));
-/**
- * Map pattern to list of files
- * @param src some pattern
- * @param upload function invoked for each file in parallel
- * @returns when all success resolved
- */
-function uploadBatch(src, upload) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const files = yield globby_1.default(src);
-        return Promise.all(files.map((file) => __awaiter(this, void 0, void 0, function* () {
-            return upload(file);
-        })));
-    });
-}
-exports.uploadBatch = uploadBatch;
 
 
 /***/ }),
