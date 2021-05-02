@@ -1,6 +1,4 @@
-import { Uploader } from './Uploader'
-
-export type StreamUploader = {
+export interface StreamUploader {
   onProgress?: (uploaded: number, total: number) => void
 
   /**
@@ -13,4 +11,4 @@ export type StreamUploader = {
    * @default 8Mb
    */
   partSizeBytes?: number
-} & Uploader
+}

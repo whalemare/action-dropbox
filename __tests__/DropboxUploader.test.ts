@@ -2,6 +2,8 @@ import * as fsRaw from 'fs'
 
 const fs = fsRaw.promises
 
+import globby from 'globby'
+
 import { DropboxUploader } from '../src/upload/dropbox/DropboxUploader'
 import { uploadBatch } from '../src/upload/uploadBatch'
 
@@ -13,7 +15,7 @@ import { uploadBatch } from '../src/upload/uploadBatch'
  */
 const ACCESS_TOKEN = 'Cms2dEbdMIsAAAAAAAAAAavdNFDJ0yalT_GQcbY5GWcXghNm-4rikfZmfycs8lL7'
 
-describe.skip('upload', () => {
+describe('upload', () => {
   const file = '__tests__/shouldRetry.test.ts'
 
   test(
@@ -108,7 +110,21 @@ describe.skip('upload', () => {
     60 * 1000,
   )
 
-  // test('download', () => {
-  //   new Dropbox({accessToken}).
-  // })
+  test(
+    'upload files',
+    async () => {
+      const uploader = DropboxUploader.create({
+        accessToken: ACCESS_TOKEN,
+        logger: console,
+      })
+
+      const files = await globby('src/**/*')
+      try {
+        await uploader.uploadFiles(files, '/test')
+      } catch (e) {
+        console.error(e.error)
+      }
+    },
+    60 * 1000,
+  )
 })

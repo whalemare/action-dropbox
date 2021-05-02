@@ -1,5 +1,5 @@
 import * as fsRaw from 'fs'
-const fs = fsRaw.promises
+import { join } from 'path'
 
 import { Dropbox } from 'dropbox'
 
@@ -8,6 +8,8 @@ import { UploadArgs, Uploader } from '../Uploader'
 
 import { DropboxUploaderArgs } from './types/DropboxUploaderArgs'
 import { StreamUploader } from './types/StreamUploader'
+
+const fs = fsRaw.promises
 
 /**
  * 8Mb - Dropbox JavaScript API suggested max file / chunk size
@@ -78,14 +80,19 @@ export class DropboxUploader implements Uploader {
   }
 
   /**
-   * Upload file larger than 150Mb or for batch uploading
+   * Upload file larger than 150Mb
    *
    * @param buffer file content
    * @param destination file name on dropbox. Should be started from /
    * @param onProgress optional function that indicate progress
    * @returns
    */
-  uploadStream = async ({ file, destination, partSizeBytes = DROPBOX_MAX_BLOB_SIZE, onProgress }: StreamUploader) => {
+  uploadStream = async ({
+    file,
+    destination,
+    partSizeBytes = DROPBOX_MAX_BLOB_SIZE,
+    onProgress,
+  }: StreamUploader & UploadArgs) => {
     const fileStream = fsRaw.createReadStream(file, { highWaterMark: partSizeBytes })
 
     let sessionId: string | undefined = undefined
@@ -104,6 +111,7 @@ export class DropboxUploader implements Uploader {
           // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
           cursor: { session_id: sessionId, offset: uploaded },
           contents: chunk,
+          close: false,
         })
       }
       onProgress?.(uploaded, size)
@@ -124,6 +132,91 @@ export class DropboxUploader implements Uploader {
       this.logger?.warn(`Skip ${file}, because it has empty content`)
       return ''
     }
+  }
+
+  /**
+   * Batch file uploading
+   *
+   * @param files
+   * @param destination
+   */
+  uploadFiles = async (files: string[], destination: string) => {
+    const sessions: {
+      [k in string]: {
+        sessionId: string
+        fileSize: number
+      }
+    } = {}
+    const promises = files.map(async (file) => {
+      const fileStat = fsRaw.statSync(file)
+      const fileSize = fileStat.size
+      if (fileSize > 0) {
+        const fileStream = fsRaw.createReadStream(file, { highWaterMark: 1024 })
+
+        let sessionId: string | undefined = undefined
+        let uploaded = 0
+
+        for await (const chunk of fileStream) {
+          const isLastChunk = uploaded + chunk.length === fileSize
+
+          this.logger?.debug(`
+            File ${file}
+            filesize: ${fileSize}
+            sessionId: ${sessionId}
+            uploaded: ${uploaded}
+            chunk: ${chunk.length}
+            isLastChunk: ${isLastChunk}
+          `)
+
+          if (sessionId === undefined) {
+            sessionId = (await this.dropbox.filesUploadSessionStart({ contents: chunk, close: isLastChunk })).result
+              .session_id
+            sessions[file] = {
+              sessionId: sessionId,
+              fileSize: fileSize,
+            }
+          } else {
+            await this.dropbox.filesUploadSessionAppendV2({
+              // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
+              cursor: { session_id: sessionId, offset: uploaded },
+              contents: chunk,
+              close: isLastChunk,
+            })
+          }
+          uploaded += chunk.length
+        }
+      }
+    })
+    await Promise.all(promises)
+
+    await this.dropbox.filesUploadSessionFinishBatch({
+      // @ts-ignore incorrect typing with contents
+      entries: files.map((file) => {
+        return {
+          commit: {
+            path: join(destination, file),
+            mode: { '.tag': 'overwrite' },
+          },
+          cursor: {
+            session_id: sessions[file].sessionId,
+            offset: sessions[file].fileSize,
+          },
+        }
+      }),
+    })
+
+    // TODO: wait processing flag
+    // console.log('response', response.result)
+
+    // let repeat = 5
+    // while (repeat-- >= 0) {
+    //   const respose = await this.dropbox.filesUploadSessionFinishBatchCheck({
+    //     // @ts-ignore
+    //     async_job_id: response.result.async_job_id,
+    //   })
+    //   console.log('response checking', JSON.stringify(respose.result))
+    //   await new Promise((r) => setTimeout(r, 2500))
+    // }
   }
 
   constructor(private dropbox: Dropbox, private logger?: Logger) {}
