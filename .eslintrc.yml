@@ -1,0 +1,138 @@
+env:
+  es6: true
+
+extends:
+  - plugin:import/typescript
+  - plugin:@typescript-eslint/recommended
+  - prettier/@typescript-eslint
+  - plugin:prettier/recommended
+
+globals:
+  Atomics: readonly
+  SharedArrayBuffer: readonly
+  __DEV__: true
+
+parser: '@typescript-eslint/parser'
+
+parserOptions:
+  ecmaFeatures:
+    jsx: true
+  ecmaVersion: 2018
+  sourceType: module
+  project: './tsconfig.eslint.json'
+
+plugins:
+  - import
+  - '@typescript-eslint'
+  - i18n
+  - 'unused-imports'
+  - jest
+
+rules:
+  react/prop-types: 'off'
+  no-irregular-whitespace: 'error'
+  no-useless-escape: 'error'
+  i18n/no-russian-character: 'error'
+  no-magic-numbers: 'off'
+  no-debugger: 'error'
+  no-console: 'warn'
+
+  '@typescript-eslint/adjacent-overload-signatures': 'error'
+  '@typescript-eslint/array-type': ['error', { default:"array-simple" }]
+  '@typescript-eslint/ban-ts-comment': 'off'
+  '@typescript-eslint/ban-types': 'warn'
+  '@typescript-eslint/consistent-type-definitions': 'error'
+  '@typescript-eslint/member-ordering': [
+      'warn',
+      default: [
+        'signature',
+
+        # Fields
+        'private-static-field',
+        'private-decorated-field',
+        'private-instance-field',
+        'private-abstract-field',
+        'public-static-field',
+        'protected-static-field',
+        'public-decorated-field',
+        'protected-decorated-field',
+        'public-instance-field',
+        'protected-instance-field',
+        'public-abstract-field',
+        'protected-abstract-field',
+
+        #  Methods
+        'private-static-method',
+        'private-decorated-method',
+        'private-instance-method',
+        'private-abstract-method',
+        'public-static-method',
+        'protected-static-method',
+        'public-decorated-method',
+        'protected-decorated-method',
+        'public-instance-method',
+        'protected-instance-method',
+        'public-abstract-method',
+        'protected-abstract-method',
+
+        #  Constructors
+        'public-constructor',
+        'protected-constructor',
+        'private-constructor',
+      ],
+    ]
+  '@typescript-eslint/no-empty-interface': 'off'
+  '@typescript-eslint/no-explicit-any': 'warn'
+  '@typescript-eslint/no-extra-non-null-assertion': 'error'
+  '@typescript-eslint/no-floating-promises': ['error', { ignoreVoid: true }]
+  '@typescript-eslint/no-for-in-array': 'error'
+  '@typescript-eslint/no-misused-new': 'error'
+  '@typescript-eslint/no-misused-promises': 'error'
+  '@typescript-eslint/no-non-null-asserted-optional-chain': 'error'
+  '@typescript-eslint/no-require-imports': 'off'
+  '@typescript-eslint/no-throw-literal': 'error'
+  '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'error'
+  '@typescript-eslint/no-unnecessary-type-arguments': 'error'
+  '@typescript-eslint/prefer-as-const': 'error'
+  '@typescript-eslint/prefer-for-of': 'error'
+  '@typescript-eslint/prefer-includes': 'error'
+  '@typescript-eslint/no-extraneous-class': 'error'
+  '@typescript-eslint/no-this-alias': 'error'
+  '@typescript-eslint/prefer-optional-chain': 'error'
+  '@typescript-eslint/prefer-regexp-exec': 'warn'
+  '@typescript-eslint/prefer-string-starts-ends-with': 'error'
+  '@typescript-eslint/promise-function-async': 'error'
+  '@typescript-eslint/switch-exhaustiveness-check': 'error'
+  '@typescript-eslint/restrict-plus-operands': 'off'
+  '@typescript-eslint/explicit-function-return-type': 'off'
+  '@typescript-eslint/explicit-module-boundary-types': 'off'
+  '@typescript-eslint/no-use-before-define': 'off'
+
+  import/no-cycle: 'error'
+  import/no-useless-path-segments: 'error'
+  import/no-unused-modules: 'error'
+  import/order:
+    [
+      'error',
+      {
+        alphabetize: { order: 'asc' },
+        'newlines-between': 'always',
+        groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index', 'unknown'],
+        pathGroups: [{ pattern: '~/**', group: 'internal' }, { pattern: './**', group: 'sibling' }],
+      },
+    ]
+
+  # autofix unused imports
+  '@typescript-eslint/no-unused-vars': 'off'
+  'unused-imports/no-unused-imports': 'warn'
+  'unused-imports/no-unused-vars':
+    ['warn', { 'vars': 'all', 'varsIgnorePattern': '^_', 'args': 'after-used', 'argsIgnorePattern': '^_' }]
+
+  "jest/no-disabled-tests": "warn"
+  "jest/no-focused-tests": "warn"
+  "jest/no-identical-title": "warn"
+  "jest/prefer-to-have-length": "warn"
+  "jest/valid-expect": "warn"
+  "jest/expect-expect": "warn"
+  "jest/no-conditional-expect": "warn"
+  "jest/no-done-callback": "warn"
