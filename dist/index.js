@@ -165,7 +165,6 @@ var __asyncValues = (this && this.__asyncValues) || function (o) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DropboxUploader = void 0;
 const fsRaw = __importStar(__webpack_require__(5747));
-const path_1 = __webpack_require__(5622);
 const dropbox_1 = __webpack_require__(8939);
 const delay_1 = __webpack_require__(3491);
 const retry_1 = __webpack_require__(4542);
@@ -198,6 +197,8 @@ class DropboxUploader {
                     path: destination,
                     contents: buffer,
                     mode: { '.tag': 'overwrite' },
+                    autorename: true,
+                    strict_conflict: false,
                 });
                 (_d = this.logger) === null || _d === void 0 ? void 0 : _d.info(`Uploaded: ${file} with id ${response.result.id}`);
                 return response.result.id;
@@ -294,107 +295,41 @@ class DropboxUploader {
          * @param files
          * @param destination
          */
-        this.uploadFiles = (files, destination, { onProgress, partSizeBytes = DROPBOX_MAX_BLOB_SIZE } = {}) => __awaiter(this, void 0, void 0, function* () {
-            var _c;
-            (_c = this.logger) === null || _c === void 0 ? void 0 : _c.info(`Start uploading ${files.length} files`);
-            const sessions = {};
-            const promises = files.map((file) => __awaiter(this, void 0, void 0, function* () {
-                var e_2, _d;
-                const fileStat = fsRaw.statSync(file);
-                const fileSize = fileStat.size;
-                if (fileSize > 0) {
-                    const fileStream = fsRaw.createReadStream(file, { highWaterMark: partSizeBytes });
-                    let sessionId = undefined;
-                    let uploaded = 0;
-                    try {
-                        for (var fileStream_2 = __asyncValues(fileStream), fileStream_2_1; fileStream_2_1 = yield fileStream_2.next(), !fileStream_2_1.done;) {
-                            const chunk = fileStream_2_1.value;
-                            const isLastChunk = uploaded + chunk.length === fileSize;
-                            // this.logger?.debug(`
-                            //   File ${file}
-                            //   filesize: ${fileSize}
-                            //   sessionId: ${sessionId}
-                            //   uploaded: ${uploaded}
-                            //   chunk: ${chunk.length}
-                            //   isLastChunk: ${isLastChunk}
-                            // `)
-                            if (sessionId === undefined) {
-                                yield this.retryWhenTooManyRequests(() => __awaiter(this, void 0, void 0, function* () {
-                                    sessionId = (yield this.dropbox.filesUploadSessionStart({ contents: chunk, close: isLastChunk })).result
-                                        .session_id;
-                                    sessions[file] = {
-                                        sessionId: sessionId,
-                                        fileSize: fileSize,
-                                    };
-                                }));
-                            }
-                            else {
-                                yield this.dropbox.filesUploadSessionAppendV2({
-                                    // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
-                                    cursor: { session_id: sessionId, offset: uploaded },
-                                    contents: chunk,
-                                    close: isLastChunk,
-                                });
-                            }
-                            uploaded += chunk.length;
-                            onProgress === null || onProgress === void 0 ? void 0 : onProgress(uploaded, fileSize, file);
-                        }
-                    }
-                    catch (e_2_1) { e_2 = { error: e_2_1 }; }
-                    finally {
-                        try {
-                            if (fileStream_2_1 && !fileStream_2_1.done && (_d = fileStream_2.return)) yield _d.call(fileStream_2);
-                        }
-                        finally { if (e_2) throw e_2.error; }
-                    }
+        this.uploadFiles = (files, destination, { onProgress, partSizeBytes = DROPBOX_MAX_BLOB_SIZE } = {}) => { var files_1, files_1_1; return __awaiter(this, void 0, void 0, function* () {
+            var e_2, _a;
+            var _b;
+            (_b = this.logger) === null || _b === void 0 ? void 0 : _b.info(`Start uploading ${files.length} files`);
+            try {
+                for (files_1 = __asyncValues(files); files_1_1 = yield files_1.next(), !files_1_1.done;) {
+                    const file = files_1_1.value;
+                    onProgress === null || onProgress === void 0 ? void 0 : onProgress(0, 100, file);
+                    yield this.retryWhenTooManyRequests(() => __awaiter(this, void 0, void 0, function* () {
+                        return this.upload({
+                            file,
+                            destination,
+                        });
+                    }));
+                    onProgress === null || onProgress === void 0 ? void 0 : onProgress(100, 100, file);
                 }
-            }));
-            yield Promise.all(promises);
-            yield this.dropbox.filesUploadSessionFinishBatch({
-                // @ts-ignore incorrect typing with contents
-                entries: files.map((file) => {
-                    return {
-                        commit: {
-                            path: path_1.join(destination, file),
-                            mode: { '.tag': 'overwrite' },
-                        },
-                        cursor: {
-                            session_id: sessions[file].sessionId,
-                            offset: sessions[file].fileSize,
-                        },
-                    };
-                }),
-            });
-            // TODO: wait processing flag
-            // console.log('response', response.result)
-            // let repeat = 5
-            // while (repeat-- >= 0) {
-            //   const respose = await this.dropbox.filesUploadSessionFinishBatchCheck({
-            //     // @ts-ignore
-            //     async_job_id: response.result.async_job_id,
-            //   })
-            //   console.log('response checking', JSON.stringify(respose.result))
-            //   await new Promise((r) => setTimeout(r, 2500))
-            // }
-        });
+            }
+            catch (e_2_1) { e_2 = { error: e_2_1 }; }
+            finally {
+                try {
+                    if (files_1_1 && !files_1_1.done && (_a = files_1.return)) yield _a.call(files_1);
+                }
+                finally { if (e_2) throw e_2.error; }
+            }
+        }); };
         this.retryWhenTooManyRequests = (func) => __awaiter(this, void 0, void 0, function* () {
             return retry_1.shouldRetry(func, (error) => __awaiter(this, void 0, void 0, function* () {
-                var _e, _f, _g, _h, _j, _k, _l, _m;
+                var _c, _d, _e, _f, _g, _h;
                 console.warn(`error = ${JSON.stringify(error)}`);
-                if (this.promiseLock) {
-                    yield this.promiseLock;
+                if ((_d = (_c = error.error) === null || _c === void 0 ? void 0 : _c.error) === null || _d === void 0 ? void 0 : _d.retry_after) {
+                    console.warn(`Error: ${error}: wait ${(_f = (_e = error.error) === null || _e === void 0 ? void 0 : _e.error) === null || _f === void 0 ? void 0 : _f.retry_after}`);
+                    yield delay_1.delay((_h = (_g = error.error) === null || _g === void 0 ? void 0 : _g.error) === null || _h === void 0 ? void 0 : _h.retry_after);
                 }
                 else {
-                    if ((_f = (_e = error.error) === null || _e === void 0 ? void 0 : _e.error) === null || _f === void 0 ? void 0 : _f.retry_after) {
-                        console.warn(`Error: ${error}: wait ${(_h = (_g = error.error) === null || _g === void 0 ? void 0 : _g.error) === null || _h === void 0 ? void 0 : _h.retry_after}`);
-                        yield delay_1.delay((_k = (_j = error.error) === null || _j === void 0 ? void 0 : _j.error) === null || _k === void 0 ? void 0 : _k.retry_after);
-                        this.promiseLock = delay_1.delay((_m = (_l = error.error) === null || _l === void 0 ? void 0 : _l.error) === null || _m === void 0 ? void 0 : _m.retry_after);
-                        yield this.promiseLock;
-                    }
-                    else {
-                        this.promiseLock = delay_1.delay(1000);
-                        yield this.promiseLock;
-                    }
+                    yield delay_1.delay(1000);
                 }
                 return true;
             }), 5);
