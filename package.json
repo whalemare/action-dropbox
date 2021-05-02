@@ -27,13 +27,12 @@
   "license": "MIT",
   "dependencies": {
     "@actions/core": "1.2.7",
-    "dropbox": "9.6.0",
-    "lodash": "4.17.21"
+    "dropbox": "9.6.0"
   },
   "devDependencies": {
     "@types/jest": "^26.0.15",
-    "@types/lodash": "^4.14.168",
     "@types/node": "^14.14.9",
+    "@types/node-fetch": "^2.5.10",
     "@typescript-eslint/parser": "^4.8.1",
     "@vercel/ncc": "^0.25.1",
     "eslint": "7.22.0",
