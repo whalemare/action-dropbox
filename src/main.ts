@@ -6,12 +6,13 @@ import { DropboxUploader } from './upload/dropbox/DropboxUploader'
 import { uploadBatch } from './upload/uploadBatch'
 import { getInputs } from './utils/getInputs'
 
-const { accessToken, file, destination, pattern, displayProgress = false } = getInputs({
+const { accessToken, file, destination, pattern, displayProgress = false, partSizeBytes = 1024 } = getInputs({
   accessToken: 'string',
   pattern: 'string?',
   file: 'string?',
   destination: 'string',
   displayProgress: 'boolean?',
+  partSizeBytes: 'number?',
 })
 
 async function run() {
@@ -23,6 +24,7 @@ async function run() {
   core.info(`file ${file}`)
   core.info(`destination ${destination}`)
   core.info(`displayProgress ${displayProgress ? 'true' : 'false'}`)
+  core.info(`partSizeBytes ${partSizeBytes}`)
   core.endGroup()
 
   if (pattern) {
@@ -31,6 +33,7 @@ async function run() {
         const buffer = await fs.promises.readFile(file)
         const fileId = await dropbox.uploadStream({
           buffer,
+          partSizeBytes: partSizeBytes,
           destination: destination,
           onProgress: displayProgress
             ? (current, total) => {

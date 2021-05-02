@@ -17,6 +17,9 @@ inputs:
   file:
     required: false
     description: 'path to specific file (ex. src/main.ts)'
+  partSizeBytes:
+    required: false
+    description: 'Size of one uploadable chunk in bytes. default: 1024'
   displayProgress:
     required: false
     description: "Display file uploading progress logs. default: false"
