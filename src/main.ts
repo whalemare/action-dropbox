@@ -1,4 +1,5 @@
 import * as core from '@actions/core'
+import { join } from 'node:path'
 
 import { DropboxUploader } from './upload/dropbox/DropboxUploader'
 import { uploadBatch } from './upload/uploadBatch'
@@ -31,7 +32,7 @@ async function run() {
         const fileId = await dropbox.uploadStream({
           file,
           partSizeBytes: partSizeBytes,
-          destination: destination,
+          destination: join(destination, file),
           onProgress: displayProgress
             ? (current, total) => {
                 const percent = Math.round((current / total) * 100)
@@ -48,7 +49,7 @@ async function run() {
   if (file) {
     const fileId = await dropbox.upload({
       file: file,
-      destination: destination,
+      destination: join(destination, file),
     })
     uploadedFiles.push(fileId)
   }

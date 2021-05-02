@@ -13,7 +13,7 @@ import { uploadBatch } from '../src/upload/uploadBatch'
  */
 const ACCESS_TOKEN = 'Cms2dEbdMIsAAAAAAAAAAavdNFDJ0yalT_GQcbY5GWcXghNm-4rikfZmfycs8lL7'
 
-describe('upload', () => {
+describe.skip('upload', () => {
   const file = '__tests__/shouldRetry.test.ts'
 
   test(
