@@ -1,11 +1,14 @@
-import { retry } from '../src/utils/retry'
+import { shouldRetry } from '../src/utils/retry'
 
 it('retry return data when success', async () => {
   let counter = 0
-  const result = await retry(async () => {
-    counter++
-    return 'data'
-  })
+  const result = await shouldRetry(
+    async () => {
+      counter++
+      return 'data'
+    },
+    async () => true,
+  )
   expect(result).toBe('data')
   expect(counter).toBe(1) // should be only one request, because first is success
 })
@@ -13,10 +16,14 @@ it('retry return data when success', async () => {
 it(`retry should fail when to much errors`, async () => {
   let counter = 0
   try {
-    await retry(async () => {
-      counter++
-      throw Error('error ' + counter)
-    }, 3)
+    await shouldRetry(
+      async () => {
+        counter++
+        throw Error('error ' + counter)
+      },
+      async () => true,
+      3,
+    )
   } catch (e) {
     // eslint-disable-next-line jest/no-conditional-expect
     expect(e.message).toBe('error 4')

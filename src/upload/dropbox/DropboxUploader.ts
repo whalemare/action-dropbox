@@ -165,43 +165,32 @@ export class DropboxUploader implements Uploader {
         for await (const chunk of fileStream) {
           const isLastChunk = uploaded + chunk.length === fileSize
 
-          this.logger?.debug(`
-            File ${file}
-            filesize: ${fileSize}
-            sessionId: ${sessionId}
-            uploaded: ${uploaded}
-            chunk: ${chunk.length}
-            isLastChunk: ${isLastChunk}
-          `)
+          // this.logger?.debug(`
+          //   File ${file}
+          //   filesize: ${fileSize}
+          //   sessionId: ${sessionId}
+          //   uploaded: ${uploaded}
+          //   chunk: ${chunk.length}
+          //   isLastChunk: ${isLastChunk}
+          // `)
 
           if (sessionId === undefined) {
-            await shouldRetry<any, { error?: { retry_after?: number } }>(
-              async () => {
-                sessionId = (await this.dropbox.filesUploadSessionStart({ contents: chunk, close: isLastChunk })).result
-                  .session_id
-                sessions[file] = {
-                  sessionId: sessionId,
-                  fileSize: fileSize,
-                }
-              },
-              async (error) => {
-                if (error.error?.retry_after) {
-                  this.logger?.warn(`Error: ${error}: wait ${error.error?.retry_after}`)
-                  await delay(error.error?.retry_after)
-                } else {
-                  await delay(100)
-                }
-
-                return true
-              },
-              5,
-            )
+            await retryWhenTooManyRequests(async () => {
+              sessionId = (await this.dropbox.filesUploadSessionStart({ contents: chunk, close: isLastChunk })).result
+                .session_id
+              sessions[file] = {
+                sessionId: sessionId,
+                fileSize: fileSize,
+              }
+            })
           } else {
-            await this.dropbox.filesUploadSessionAppendV2({
-              // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
-              cursor: { session_id: sessionId, offset: uploaded },
-              contents: chunk,
-              close: isLastChunk,
+            await retryWhenTooManyRequests(async () => {
+              return this.dropbox.filesUploadSessionAppendV2({
+                // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
+                cursor: { session_id: sessionId, offset: uploaded },
+                contents: chunk,
+                close: isLastChunk,
+              })
             })
           }
           uploaded += chunk.length
@@ -242,4 +231,22 @@ export class DropboxUploader implements Uploader {
   }
 
   constructor(private dropbox: Dropbox, private logger?: Logger) {}
+}
+
+const retryWhenTooManyRequests = async <T>(func: () => Promise<T>) => {
+  return shouldRetry<any, { error?: { error?: { retry_after?: number } } }>(
+    func,
+    async (error) => {
+      console.warn(`error = ${JSON.stringify(error)}`)
+      if (error.error?.error?.retry_after) {
+        console.warn(`Error: ${error}: wait ${error.error?.error?.retry_after}`)
+        await delay(error.error?.error?.retry_after)
+      } else {
+        await delay(1000)
+      }
+
+      return true
+    },
+    5,
+  )
 }
