@@ -136,6 +136,7 @@ export class DropboxUploader implements Uploader {
     }
   }
 
+  promiseLock: undefined | Promise<any>
   /**
    * Batch file uploading
    *
@@ -147,6 +148,7 @@ export class DropboxUploader implements Uploader {
     destination: string,
     { onProgress, partSizeBytes = DROPBOX_MAX_BLOB_SIZE }: StreamUploader = {},
   ) => {
+    this.logger?.info(`Start uploading ${files.length} files`)
     const sessions: {
       [k in string]: {
         sessionId: string
@@ -175,7 +177,7 @@ export class DropboxUploader implements Uploader {
           // `)
 
           if (sessionId === undefined) {
-            await retryWhenTooManyRequests(async () => {
+            await this.retryWhenTooManyRequests(async () => {
               sessionId = (await this.dropbox.filesUploadSessionStart({ contents: chunk, close: isLastChunk })).result
                 .session_id
               sessions[file] = {
@@ -184,13 +186,11 @@ export class DropboxUploader implements Uploader {
               }
             })
           } else {
-            await retryWhenTooManyRequests(async () => {
-              return this.dropbox.filesUploadSessionAppendV2({
-                // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
-                cursor: { session_id: sessionId, offset: uploaded },
-                contents: chunk,
-                close: isLastChunk,
-              })
+            await this.dropbox.filesUploadSessionAppendV2({
+              // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
+              cursor: { session_id: sessionId, offset: uploaded },
+              contents: chunk,
+              close: isLastChunk,
             })
           }
           uploaded += chunk.length
@@ -230,23 +230,31 @@ export class DropboxUploader implements Uploader {
     // }
   }
 
+  retryWhenTooManyRequests = async <T>(func: () => Promise<T>) => {
+    return shouldRetry<any, { error?: { error?: { retry_after?: number } } }>(
+      func,
+      async (error) => {
+        console.warn(`error = ${JSON.stringify(error)}`)
+
+        if (this.promiseLock) {
+          await this.promiseLock
+        } else {
+          if (error.error?.error?.retry_after) {
+            console.warn(`Error: ${error}: wait ${error.error?.error?.retry_after}`)
+            await delay(error.error?.error?.retry_after)
+            this.promiseLock = delay(error.error?.error?.retry_after)
+            await this.promiseLock
+          } else {
+            this.promiseLock = delay(1000)
+            await this.promiseLock
+          }
+        }
+
+        return true
+      },
+      5,
+    )
+  }
+
   constructor(private dropbox: Dropbox, private logger?: Logger) {}
-}
-
-const retryWhenTooManyRequests = async <T>(func: () => Promise<T>) => {
-  return shouldRetry<any, { error?: { error?: { retry_after?: number } } }>(
-    func,
-    async (error) => {
-      console.warn(`error = ${JSON.stringify(error)}`)
-      if (error.error?.error?.retry_after) {
-        console.warn(`Error: ${error}: wait ${error.error?.error?.retry_after}`)
-        await delay(error.error?.error?.retry_after)
-      } else {
-        await delay(1000)
-      }
-
-      return true
-    },
-    5,
-  )
 }

@@ -295,9 +295,11 @@ class DropboxUploader {
          * @param destination
          */
         this.uploadFiles = (files, destination, { onProgress, partSizeBytes = DROPBOX_MAX_BLOB_SIZE } = {}) => __awaiter(this, void 0, void 0, function* () {
+            var _c;
+            (_c = this.logger) === null || _c === void 0 ? void 0 : _c.info(`Start uploading ${files.length} files`);
             const sessions = {};
             const promises = files.map((file) => __awaiter(this, void 0, void 0, function* () {
-                var e_2, _c;
+                var e_2, _d;
                 const fileStat = fsRaw.statSync(file);
                 const fileSize = fileStat.size;
                 if (fileSize > 0) {
@@ -317,7 +319,7 @@ class DropboxUploader {
                             //   isLastChunk: ${isLastChunk}
                             // `)
                             if (sessionId === undefined) {
-                                yield retryWhenTooManyRequests(() => __awaiter(this, void 0, void 0, function* () {
+                                yield this.retryWhenTooManyRequests(() => __awaiter(this, void 0, void 0, function* () {
                                     sessionId = (yield this.dropbox.filesUploadSessionStart({ contents: chunk, close: isLastChunk })).result
                                         .session_id;
                                     sessions[file] = {
@@ -327,14 +329,12 @@ class DropboxUploader {
                                 }));
                             }
                             else {
-                                yield retryWhenTooManyRequests(() => __awaiter(this, void 0, void 0, function* () {
-                                    return this.dropbox.filesUploadSessionAppendV2({
-                                        // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
-                                        cursor: { session_id: sessionId, offset: uploaded },
-                                        contents: chunk,
-                                        close: isLastChunk,
-                                    });
-                                }));
+                                yield this.dropbox.filesUploadSessionAppendV2({
+                                    // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
+                                    cursor: { session_id: sessionId, offset: uploaded },
+                                    contents: chunk,
+                                    close: isLastChunk,
+                                });
                             }
                             uploaded += chunk.length;
                             onProgress === null || onProgress === void 0 ? void 0 : onProgress(uploaded, fileSize, file);
@@ -343,7 +343,7 @@ class DropboxUploader {
                     catch (e_2_1) { e_2 = { error: e_2_1 }; }
                     finally {
                         try {
-                            if (fileStream_2_1 && !fileStream_2_1.done && (_c = fileStream_2.return)) yield _c.call(fileStream_2);
+                            if (fileStream_2_1 && !fileStream_2_1.done && (_d = fileStream_2.return)) yield _d.call(fileStream_2);
                         }
                         finally { if (e_2) throw e_2.error; }
                     }
@@ -377,6 +377,28 @@ class DropboxUploader {
             //   await new Promise((r) => setTimeout(r, 2500))
             // }
         });
+        this.retryWhenTooManyRequests = (func) => __awaiter(this, void 0, void 0, function* () {
+            return retry_1.shouldRetry(func, (error) => __awaiter(this, void 0, void 0, function* () {
+                var _e, _f, _g, _h, _j, _k, _l, _m;
+                console.warn(`error = ${JSON.stringify(error)}`);
+                if (this.promiseLock) {
+                    yield this.promiseLock;
+                }
+                else {
+                    if ((_f = (_e = error.error) === null || _e === void 0 ? void 0 : _e.error) === null || _f === void 0 ? void 0 : _f.retry_after) {
+                        console.warn(`Error: ${error}: wait ${(_h = (_g = error.error) === null || _g === void 0 ? void 0 : _g.error) === null || _h === void 0 ? void 0 : _h.retry_after}`);
+                        yield delay_1.delay((_k = (_j = error.error) === null || _j === void 0 ? void 0 : _j.error) === null || _k === void 0 ? void 0 : _k.retry_after);
+                        this.promiseLock = delay_1.delay((_m = (_l = error.error) === null || _l === void 0 ? void 0 : _l.error) === null || _m === void 0 ? void 0 : _m.retry_after);
+                        yield this.promiseLock;
+                    }
+                    else {
+                        this.promiseLock = delay_1.delay(1000);
+                        yield this.promiseLock;
+                    }
+                }
+                return true;
+            }), 5);
+        });
     }
     /**
      * Helper function for create DropboxUploader instance with no effort
@@ -388,20 +410,6 @@ class DropboxUploader {
     }
 }
 exports.DropboxUploader = DropboxUploader;
-const retryWhenTooManyRequests = (func) => __awaiter(void 0, void 0, void 0, function* () {
-    return retry_1.shouldRetry(func, (error) => __awaiter(void 0, void 0, void 0, function* () {
-        var _a, _b, _c, _d, _e, _f;
-        console.warn(`error = ${JSON.stringify(error)}`);
-        if ((_b = (_a = error.error) === null || _a === void 0 ? void 0 : _a.error) === null || _b === void 0 ? void 0 : _b.retry_after) {
-            console.warn(`Error: ${error}: wait ${(_d = (_c = error.error) === null || _c === void 0 ? void 0 : _c.error) === null || _d === void 0 ? void 0 : _d.retry_after}`);
-            yield delay_1.delay((_f = (_e = error.error) === null || _e === void 0 ? void 0 : _e.error) === null || _f === void 0 ? void 0 : _f.retry_after);
-        }
-        else {
-            yield delay_1.delay(1000);
-        }
-        return true;
-    }), 5);
-});
 
 
 /***/ }),
