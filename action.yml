@@ -1,11 +1,21 @@
-name: 'Your name here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'Dropbox Uploader'
+description: 'Upload files to Dropbox. Support files up to 150 Gb: smallFile < 150Mb <= largeFile <=150Gb'
+author: 'whalemare'
 inputs:
-  milliseconds: # change this
+  access_token:
     required: true
-    description: 'input description here'
+    description: 'Dropbox access token. Create new one at: https://www.dropbox.com/developers/apps'
+  pattern:
+    required: false
+    description: 'glob pattern for file (ex. src/**/*)'
     default: 'default value if applicable'
+  file:
+    required: false
+    description: 'path to specific file (ex. src/main.ts)'
+  destination:
+    required: false
+    description: 'Dropbox destination path for uploading. Must be started from /". (ex. "/actions", "/actions/main.ts")'
+
 runs:
   using: 'node12'
   main: 'dist/index.js'

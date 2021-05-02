@@ -1,7 +1,4 @@
-export async function retry<T>(
-  request: (countLeft: number) => Promise<T>,
-  maxRetryCount = 3
-): Promise<T> {
+export async function retry<T>(request: (countLeft: number) => Promise<T>, maxRetryCount = 3): Promise<T> {
   const countLeft = maxRetryCount - 1
   try {
     const response = await request(countLeft)
