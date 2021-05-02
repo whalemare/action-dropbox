@@ -54,7 +54,15 @@ const { accessToken, file, destination, pattern, displayProgress = false, partSi
 });
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
-        const dropbox = DropboxUploader_1.DropboxUploader.create({ accessToken });
+        const dropbox = DropboxUploader_1.DropboxUploader.create({
+            accessToken,
+            logger: {
+                debug: core.debug,
+                error: core.error,
+                info: core.info,
+                warn: core.warning,
+            },
+        });
         const uploadedFiles = [];
         core.startGroup('input args');
         core.info(`pattern ${pattern}`);

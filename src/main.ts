@@ -16,7 +16,15 @@ const { accessToken, file, destination, pattern, displayProgress = false, partSi
 })
 
 async function run() {
-  const dropbox = DropboxUploader.create({ accessToken })
+  const dropbox = DropboxUploader.create({
+    accessToken,
+    logger: {
+      debug: core.debug,
+      error: core.error,
+      info: core.info,
+      warn: core.warning,
+    },
+  })
   const uploadedFiles: string[] = []
 
   core.startGroup('input args')
