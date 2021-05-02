@@ -40,7 +40,7 @@ const path_1 = __webpack_require__(5622);
 const core = __importStar(__webpack_require__(2186));
 const DropboxUploader_1 = __webpack_require__(1574);
 const uploadBatch_1 = __webpack_require__(1268);
-const getInputs_1 = __webpack_require__(3650);
+const getInputs_1 = __webpack_require__(515);
 const { accessToken, file, destination, pattern, displayProgress = false, partSizeBytes = 1024 } = getInputs_1.getInputs({
     accessToken: 'string',
     pattern: 'string?',
@@ -314,6 +314,63 @@ function uploadBatch(src, upload) {
     });
 }
 exports.uploadBatch = uploadBatch;
+
+
+/***/ }),
+
+/***/ 515:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable prettier/prettier */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getInputs = void 0;
+const core = __importStar(__webpack_require__(2186));
+function getInputs(raw) {
+    return Object.keys(raw).reduce((total, key) => {
+        const rawType = raw[key];
+        onKey(key, (value) => {
+            if (rawType === 'boolean' || rawType === 'boolean?') {
+                total[key] = Boolean(value);
+            }
+            else if (rawType === 'number' || rawType === 'number?') {
+                total[key] = Number.parseFloat(value);
+            }
+            else {
+                total[key] = value;
+            }
+        });
+        return total;
+    }, {});
+}
+exports.getInputs = getInputs;
+function onKey(key, onValue) {
+    const value = core.getInput(key);
+    if (value !== null && value !== undefined) {
+        onValue(value);
+    }
+}
 
 
 /***/ }),
@@ -14649,14 +14706,6 @@ module.exports = function(num) {
   }
   return false;
 };
-
-
-/***/ }),
-
-/***/ 3650:
-/***/ ((module) => {
-
-module.exports = eval("require")("./utils/getInputs");
 
 
 /***/ }),
