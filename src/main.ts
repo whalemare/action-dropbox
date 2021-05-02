@@ -1,24 +1,53 @@
+import * as fs from 'fs/promises'
+
 import * as core from '@actions/core'
 
-import { wait } from './wait'
+import { DropboxUploader } from './upload/dropbox/DropboxUploader'
+import { uploadBatch } from './upload/uploadBatch'
+import { getInputs } from './utils/getInputs'
 
-const accessToken = core.getInput('access_token')
+const { accessToken, destination, file, pattern } = getInputs({
+  accessToken: 'string',
+  pattern: 'string?',
+  file: 'string?',
+  destination: 'string?',
+})
 
 async function run() {
-  const ms: string = core.getInput('milliseconds')
-  core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_RUNNER_DEBUG` to true
+  const dropbox = DropboxUploader.create({ accessToken })
+  const uploadedFiles: string[] = []
 
-  core.debug(new Date().toTimeString())
-  await wait(parseInt(ms, 10))
-  core.debug(new Date().toTimeString())
+  if (pattern) {
+    await uploadBatch(pattern, async (file) => {
+      const buffer = await fs.readFile(file)
+      const fileId = await dropbox.uploadStream({
+        buffer,
+        destination: destination || file,
+        onProgress: (current, total) => {
+          const percent = Math.round((current / total) * 100)
+          core.info(`Uploading ${percent}%: ${file}`)
+        },
+      })
+      core.info(`Success uploading ${file} -> ${fileId}`)
+      uploadedFiles.push(fileId)
+    })
+  }
 
-  core.setOutput('time', new Date().toTimeString())
+  if (file) {
+    const fileId = await dropbox.upload({
+      file: file,
+      destination: destination,
+    })
+    uploadedFiles.push(fileId)
+  }
+
+  return uploadedFiles
 }
 
 run()
-  .then(() => {
+  .then((files) => {
     core.info('Success')
-    core.setOutput('files', '')
+    core.setOutput('files', files)
   })
   .catch((e) => {
     core.error(e)

@@ -30,7 +30,7 @@ export class DropboxUploader implements Uploader {
     try {
       // 150 Mb Dropbox restriction to max file for uploading
       const UPLOAD_FILE_SIZE_LIMIT = 150 * 1024 * 1024
-      const destination = `/${uploadArgs.destination || file}`
+      const destination = uploadArgs.destination || `/${file}`
       const buffer = await fs.readFile(file)
 
       this.logger?.debug(`Upload ${file} -> ${destination}: ${buffer.length} Bytes`)

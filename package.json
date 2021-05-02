@@ -26,9 +26,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@actions/core": "^1.2.6",
-    "dropbox": "^9.6.0",
-    "lodash": "^4.17.21"
+    "@actions/core": "1.2.7",
+    "dropbox": "9.6.0",
+    "lodash": "4.17.21"
   },
   "devDependencies": {
     "@types/jest": "^26.0.15",

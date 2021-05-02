@@ -2,7 +2,7 @@ name: 'Dropbox Uploader'
 description: 'Upload files to Dropbox. Support files up to 150 Gb: smallFile < 150Mb <= largeFile <=150Gb'
 author: 'whalemare'
 inputs:
-  access_token:
+  accessToken:
     required: true
     description: 'Dropbox access token. Create new one at: https://www.dropbox.com/developers/apps'
   pattern:
