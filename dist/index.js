@@ -36,7 +36,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const fs = __importStar(__webpack_require__(9225));
+const fs = __importStar(__webpack_require__(5747));
 const core = __importStar(__webpack_require__(2186));
 const DropboxUploader_1 = __webpack_require__(1574);
 const uploadBatch_1 = __webpack_require__(1268);
@@ -53,7 +53,7 @@ function run() {
         const uploadedFiles = [];
         if (pattern) {
             yield uploadBatch_1.uploadBatch(pattern, (file) => __awaiter(this, void 0, void 0, function* () {
-                const buffer = yield fs.readFile(file);
+                const buffer = yield fs.promises.readFile(file);
                 const fileId = yield dropbox.uploadStream({
                     buffer,
                     destination: destination || file,
