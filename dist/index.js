@@ -41,12 +41,13 @@ const core = __importStar(__webpack_require__(2186));
 const DropboxUploader_1 = __webpack_require__(1574);
 const uploadBatch_1 = __webpack_require__(1268);
 const getInputs_1 = __webpack_require__(515);
-const { accessToken, file, destination, pattern, displayProgress = false } = getInputs_1.getInputs({
+const { accessToken, file, destination, pattern, displayProgress = false, partSizeBytes = 1024 } = getInputs_1.getInputs({
     accessToken: 'string',
     pattern: 'string?',
     file: 'string?',
     destination: 'string',
     displayProgress: 'boolean?',
+    partSizeBytes: 'number?',
 });
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -57,6 +58,7 @@ function run() {
         core.info(`file ${file}`);
         core.info(`destination ${destination}`);
         core.info(`displayProgress ${displayProgress ? 'true' : 'false'}`);
+        core.info(`partSizeBytes ${partSizeBytes}`);
         core.endGroup();
         if (pattern) {
             yield core.group(`uploading batch ${pattern}`, () => __awaiter(this, void 0, void 0, function* () {
@@ -64,6 +66,7 @@ function run() {
                     const buffer = yield fs.promises.readFile(file);
                     const fileId = yield dropbox.uploadStream({
                         buffer,
+                        partSizeBytes: partSizeBytes,
                         destination: destination,
                         onProgress: displayProgress
                             ? (current, total) => {
@@ -162,35 +165,33 @@ class DropboxUploader {
          */
         this.upload = (_a) => { var _b, _c, _d; return __awaiter(this, void 0, void 0, function* () {
             var { file } = _a, uploadArgs = __rest(_a, ["file"]);
-            try {
-                // 150 Mb Dropbox restriction to max file for uploading
-                const UPLOAD_FILE_SIZE_LIMIT = 150 * 1024 * 1024;
-                const destination = uploadArgs.destination || `/${file}`;
-                const buffer = yield fs.readFile(file);
-                (_b = this.logger) === null || _b === void 0 ? void 0 : _b.debug(`Upload ${file} -> ${destination}: ${buffer.length} Bytes`);
-                if (buffer.length < UPLOAD_FILE_SIZE_LIMIT) {
-                    const response = yield this.dropbox.filesUpload({
-                        path: destination,
-                        contents: buffer,
-                        mode: { '.tag': 'overwrite' },
-                    });
-                    (_c = this.logger) === null || _c === void 0 ? void 0 : _c.info(`Uploaded: ${file} with id ${response.result.id}`);
-                    return response.result.id;
-                }
-                else {
-                    return this.uploadStream({
-                        buffer,
-                        destination,
-                        onProgress: (uploaded, total) => {
-                            var _a;
-                            (_a = this.logger) === null || _a === void 0 ? void 0 : _a.info(`Uploaded ${(uploaded / total) * 100}% ${file}`);
-                        },
-                    });
-                }
+            // 150 Mb Dropbox restriction to max file for uploading
+            const UPLOAD_FILE_SIZE_LIMIT = 150 * 1024 * 1024;
+            const destination = uploadArgs.destination || `/${file}`;
+            const buffer = yield fs.readFile(file);
+            if (buffer.length <= 0) {
+                (_b = this.logger) === null || _b === void 0 ? void 0 : _b.warn(`Skip file: ${file}, because it size is ${buffer.length}`);
+                return '';
             }
-            catch (e) {
-                (_d = this.logger) === null || _d === void 0 ? void 0 : _d.error(e);
-                throw e;
+            (_c = this.logger) === null || _c === void 0 ? void 0 : _c.debug(`Upload ${file} -> ${destination}: ${buffer.length} Bytes`);
+            if (buffer.length < UPLOAD_FILE_SIZE_LIMIT) {
+                const response = yield this.dropbox.filesUpload({
+                    path: destination,
+                    contents: buffer,
+                    mode: { '.tag': 'overwrite' },
+                });
+                (_d = this.logger) === null || _d === void 0 ? void 0 : _d.info(`Uploaded: ${file} with id ${response.result.id}`);
+                return response.result.id;
+            }
+            else {
+                return this.uploadStream({
+                    buffer,
+                    destination,
+                    onProgress: (uploaded, total) => {
+                        var _a;
+                        (_a = this.logger) === null || _a === void 0 ? void 0 : _a.info(`Uploaded ${(uploaded / total) * 100}% ${file}`);
+                    },
+                });
             }
         }); };
         /**
@@ -217,6 +218,11 @@ class DropboxUploader {
          * @returns
          */
         this.uploadStream = ({ buffer, destination, partSizeBytes = DROPBOX_MAX_BLOB_SIZE, onProgress }) => __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            if (buffer.length <= 0) {
+                (_a = this.logger) === null || _a === void 0 ? void 0 : _a.warn(`Skip, because it size is ${buffer.length}`);
+                return '';
+            }
             const partSize = Math.min(partSizeBytes, DROPBOX_MAX_BLOB_SIZE);
             const blobs = [];
             let offset = 0;
@@ -260,6 +266,8 @@ class DropboxUploader {
                             contents: blob,
                         })
                             .then((it) => {
+                            var _a;
+                            (_a = this.logger) === null || _a === void 0 ? void 0 : _a.info(`result uploading: ${JSON.stringify(it.result)}`);
                             return it.result.id;
                         });
                     }));
