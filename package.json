@@ -12,12 +12,9 @@
     "lint": "eslint src/**/*.ts",
     "package": "ncc build --source-map --license licenses.txt",
     "test": "jest",
-    "all": "npm run build && npm run package"
+    "all": "yarn build && yarn package"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/whalemare/action-dropbox"
-  },
+  "repository": "git+https://github.com/whalemare/action-dropbox",
   "keywords": [
     "actions",
     "dropbox",
