@@ -18,7 +18,12 @@ inputs:
   destination:
     required: false
     description: 'Dropbox destination path for uploading. Must be started from /". (ex. "/actions", "/actions/main.ts")'
-
+  displayProgress:
+    required: false
+    description: "Display file uploading progress logs . default: false"
+outputs:
+  files:
+    description: "List of files uploaded to Dropbox"
 runs:
   using: 'node12'
   main: 'dist/index.js'

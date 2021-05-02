@@ -6,11 +6,12 @@ import { DropboxUploader } from './upload/dropbox/DropboxUploader'
 import { uploadBatch } from './upload/uploadBatch'
 import { getInputs } from './utils/getInputs'
 
-const { accessToken, destination, file, pattern } = getInputs({
+const { accessToken, file, destination, pattern, displayProgress = false } = getInputs({
   accessToken: 'string',
   pattern: 'string?',
   file: 'string?',
   destination: 'string?',
+  displayProgress: 'boolean?',
 })
 
 async function run() {
@@ -23,12 +24,14 @@ async function run() {
       const fileId = await dropbox.uploadStream({
         buffer,
         destination: destination || file,
-        onProgress: (current, total) => {
-          const percent = Math.round((current / total) * 100)
-          core.info(`Uploading ${percent}%: ${file}`)
-        },
+        onProgress: displayProgress
+          ? (current, total) => {
+              const percent = Math.round((current / total) * 100)
+              core.info(`Uploading ${percent}%: ${file}`)
+            }
+          : undefined,
       })
-      core.info(`Success uploading ${file} -> ${fileId}`)
+      core.info(`Uploaded: ${file} -> ${fileId}`)
       uploadedFiles.push(fileId)
     })
   }
@@ -46,7 +49,7 @@ async function run() {
 
 run()
   .then((files) => {
-    core.info('Success')
+    core.info(`Success ${JSON.stringify(files)}`)
     core.setOutput('files', files)
   })
   .catch((e) => {
