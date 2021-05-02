@@ -93,6 +93,10 @@ export class DropboxUploader implements Uploader {
     const size = fileStream.readableLength
 
     for await (const chunk of fileStream) {
+      if (uploaded === 0 && chunk.length === 0) {
+        break
+      }
+
       if (sessionId === undefined) {
         sessionId = (await this.dropbox.filesUploadSessionStart({ contents: chunk })).result.session_id
       } else {
@@ -105,16 +109,21 @@ export class DropboxUploader implements Uploader {
       onProgress?.(uploaded, size)
       uploaded += chunk.length
     }
-    const response = await this.dropbox.filesUploadSessionFinish({
-      // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
-      cursor: { session_id: sessionId, offset: uploaded },
-      // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
-      commit: { path: destination, mode: { '.tag': 'overwrite' } },
-      contents: '',
-    })
-    onProgress?.(uploaded, size)
-
-    return response.result.id
+    if (uploaded > 0) {
+      const response = await this.dropbox.filesUploadSessionFinish({
+        // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
+        cursor: { session_id: sessionId, offset: uploaded },
+        // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
+        commit: { path: destination, mode: { '.tag': 'overwrite' } },
+        contents: '',
+      })
+      onProgress?.(uploaded, size)
+      return response.result.id
+    } else {
+      onProgress?.(uploaded, size)
+      this.logger?.warn(`Skip ${file}, because it has empty content`)
+      return ''
+    }
   }
 
   constructor(private dropbox: Dropbox, private logger?: Logger) {}

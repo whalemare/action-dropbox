@@ -226,6 +226,7 @@ class DropboxUploader {
          */
         this.uploadStream = ({ file, destination, partSizeBytes = DROPBOX_MAX_BLOB_SIZE, onProgress }) => __awaiter(this, void 0, void 0, function* () {
             var e_1, _a;
+            var _b;
             const fileStream = fsRaw.createReadStream(file, { highWaterMark: partSizeBytes });
             let sessionId = undefined;
             let uploaded = 0;
@@ -233,6 +234,9 @@ class DropboxUploader {
             try {
                 for (var fileStream_1 = __asyncValues(fileStream), fileStream_1_1; fileStream_1_1 = yield fileStream_1.next(), !fileStream_1_1.done;) {
                     const chunk = fileStream_1_1.value;
+                    if (uploaded === 0 && chunk.length === 0) {
+                        break;
+                    }
                     if (sessionId === undefined) {
                         sessionId = (yield this.dropbox.filesUploadSessionStart({ contents: chunk })).result.session_id;
                     }
@@ -254,15 +258,22 @@ class DropboxUploader {
                 }
                 finally { if (e_1) throw e_1.error; }
             }
-            const response = yield this.dropbox.filesUploadSessionFinish({
-                // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
-                cursor: { session_id: sessionId, offset: uploaded },
-                // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
-                commit: { path: destination, mode: { '.tag': 'overwrite' } },
-                contents: '',
-            });
-            onProgress === null || onProgress === void 0 ? void 0 : onProgress(uploaded, size);
-            return response.result.id;
+            if (uploaded > 0) {
+                const response = yield this.dropbox.filesUploadSessionFinish({
+                    // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
+                    cursor: { session_id: sessionId, offset: uploaded },
+                    // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
+                    commit: { path: destination, mode: { '.tag': 'overwrite' } },
+                    contents: '',
+                });
+                onProgress === null || onProgress === void 0 ? void 0 : onProgress(uploaded, size);
+                return response.result.id;
+            }
+            else {
+                onProgress === null || onProgress === void 0 ? void 0 : onProgress(uploaded, size);
+                (_b = this.logger) === null || _b === void 0 ? void 0 : _b.warn(`Skip ${file}, because it has empty content`);
+                return '';
+            }
         });
     }
     /**
