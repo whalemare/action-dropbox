@@ -4,6 +4,8 @@ import { join } from 'path'
 import { Dropbox } from 'dropbox'
 
 import { Logger } from '../../utils/Logger'
+import { delay } from '../../utils/delay'
+import { shouldRetry } from '../../utils/retry'
 import { UploadArgs, Uploader } from '../Uploader'
 
 import { DropboxUploaderArgs } from './types/DropboxUploaderArgs'
@@ -173,12 +175,27 @@ export class DropboxUploader implements Uploader {
           `)
 
           if (sessionId === undefined) {
-            sessionId = (await this.dropbox.filesUploadSessionStart({ contents: chunk, close: isLastChunk })).result
-              .session_id
-            sessions[file] = {
-              sessionId: sessionId,
-              fileSize: fileSize,
-            }
+            await shouldRetry<any, { error?: { retry_after?: number } }>(
+              async () => {
+                sessionId = (await this.dropbox.filesUploadSessionStart({ contents: chunk, close: isLastChunk })).result
+                  .session_id
+                sessions[file] = {
+                  sessionId: sessionId,
+                  fileSize: fileSize,
+                }
+              },
+              async (error) => {
+                if (error.error?.retry_after) {
+                  this.logger?.warn(`Error: ${error}: wait ${error.error?.retry_after}`)
+                  await delay(error.error?.retry_after)
+                } else {
+                  await delay(100)
+                }
+
+                return true
+              },
+              5,
+            )
           } else {
             await this.dropbox.filesUploadSessionAppendV2({
               // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
