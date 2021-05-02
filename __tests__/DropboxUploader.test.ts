@@ -1,11 +1,6 @@
-import * as fsRaw from 'fs'
-
-const fs = fsRaw.promises
-
 import globby from 'globby'
 
 import { DropboxUploader } from '../src/upload/dropbox/DropboxUploader'
-import { uploadBatch } from '../src/upload/uploadBatch'
 
 /**
  * You can get new one at
@@ -81,37 +76,8 @@ describe('upload', () => {
     },
     60 * 1000,
   )
-
   test(
-    'should upload batch files',
-    async () => {
-      const uploader = DropboxUploader.create({
-        accessToken: ACCESS_TOKEN,
-        logger: console,
-      })
-
-      await uploadBatch('src/**/*', async (file: string) => {
-        await uploader.uploadStream({
-          file: file,
-          destination: `/${file}`,
-          partSizeBytes: 500,
-          onProgress: (uploaded, total) => {
-            if (uploaded === 0) {
-              console.log(`onStart ${file}: ${uploaded}/${total}`)
-            } else if (uploaded === total) {
-              console.log(`onFinish ${file}: ${uploaded}/${total}`)
-            }
-          },
-        })
-      })
-
-      expect(true).toBeTruthy()
-    },
-    60 * 1000,
-  )
-
-  test(
-    'upload files',
+    'upload batch files',
     async () => {
       const uploader = DropboxUploader.create({
         accessToken: ACCESS_TOKEN,

@@ -114,7 +114,7 @@ export class DropboxUploader implements Uploader {
           close: false,
         })
       }
-      onProgress?.(uploaded, size)
+      onProgress?.(uploaded, size, file)
       uploaded += chunk.length
     }
     if (uploaded > 0) {
@@ -125,10 +125,10 @@ export class DropboxUploader implements Uploader {
         commit: { path: destination, mode: { '.tag': 'overwrite' } },
         contents: '',
       })
-      onProgress?.(uploaded, size)
+      onProgress?.(uploaded, size, file)
       return response.result.id
     } else {
-      onProgress?.(uploaded, size)
+      onProgress?.(uploaded, size, file)
       this.logger?.warn(`Skip ${file}, because it has empty content`)
       return ''
     }
@@ -140,7 +140,11 @@ export class DropboxUploader implements Uploader {
    * @param files
    * @param destination
    */
-  uploadFiles = async (files: string[], destination: string) => {
+  uploadFiles = async (
+    files: string[],
+    destination: string,
+    { onProgress, partSizeBytes = DROPBOX_MAX_BLOB_SIZE }: StreamUploader = {},
+  ) => {
     const sessions: {
       [k in string]: {
         sessionId: string
@@ -151,7 +155,7 @@ export class DropboxUploader implements Uploader {
       const fileStat = fsRaw.statSync(file)
       const fileSize = fileStat.size
       if (fileSize > 0) {
-        const fileStream = fsRaw.createReadStream(file, { highWaterMark: 1024 })
+        const fileStream = fsRaw.createReadStream(file, { highWaterMark: partSizeBytes })
 
         let sessionId: string | undefined = undefined
         let uploaded = 0
@@ -184,6 +188,7 @@ export class DropboxUploader implements Uploader {
             })
           }
           uploaded += chunk.length
+          onProgress?.(uploaded, fileSize, file)
         }
       }
     })

@@ -1,9 +1,9 @@
 import { join } from 'path'
 
 import * as core from '@actions/core'
+import globby from 'globby'
 
 import { DropboxUploader } from './upload/dropbox/DropboxUploader'
-import { uploadBatch } from './upload/uploadBatch'
 import { getInputs } from './utils/getInputs'
 
 const { accessToken, file, destination, pattern, displayProgress = false, partSizeBytes = 1024 } = getInputs({
@@ -29,33 +29,29 @@ async function run() {
 
   if (pattern) {
     await core.group(`uploading batch ${pattern}`, async () => {
-      return uploadBatch(pattern, async (file) => {
-        const fileId = await dropbox.uploadStream({
-          file,
-          partSizeBytes: partSizeBytes,
-          destination: join(destination, file),
-          onProgress: displayProgress
-            ? (current, total) => {
-                const percent = Math.round((current / total) * 100)
-                core.info(`Uploading ${percent}%: ${file}`)
-              }
-            : undefined,
-        })
-        core.info(`Uploaded: ${file} -> ${fileId}`)
-        uploadedFiles.push(fileId)
+      const files = await globby(pattern)
+      await dropbox.uploadFiles(files, destination, {
+        onProgress: (current, total, file) => {
+          const percent = Math.round((current / total) * 100)
+          if (displayProgress) {
+            core.info(`Uploading ${percent}%: ${file}`)
+          } else if (percent === 100) {
+            core.info(`Uploaded: ${file}`)
+            files.push(file)
+          }
+        },
+        partSizeBytes: partSizeBytes,
       })
     })
   }
 
   if (file) {
-    const fileId = await dropbox.upload({
+    await dropbox.upload({
       file: file,
       destination: join(destination, file),
     })
-    uploadedFiles.push(fileId)
+    uploadedFiles.push(file)
   }
-
-  return uploadedFiles
 }
 
 run()

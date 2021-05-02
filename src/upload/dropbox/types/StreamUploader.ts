@@ -1,5 +1,5 @@
 export interface StreamUploader {
-  onProgress?: (uploaded: number, total: number) => void
+  onProgress?: (uploaded: number, total: number, file: string) => void
 
   /**
    * Size of small blob part
