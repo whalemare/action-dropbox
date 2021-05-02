@@ -1,5 +1,3 @@
-import * as fs from 'fs'
-
 import * as core from '@actions/core'
 
 import { DropboxUploader } from './upload/dropbox/DropboxUploader'
@@ -30,9 +28,8 @@ async function run() {
   if (pattern) {
     await core.group(`uploading batch ${pattern}`, async () => {
       return uploadBatch(pattern, async (file) => {
-        const buffer = await fs.promises.readFile(file)
         const fileId = await dropbox.uploadStream({
-          buffer,
+          file,
           partSizeBytes: partSizeBytes,
           destination: destination,
           onProgress: displayProgress

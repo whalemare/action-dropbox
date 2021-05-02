@@ -31,6 +31,8 @@ export class DropboxUploader implements Uploader {
     // 150 Mb Dropbox restriction to max file for uploading
     const UPLOAD_FILE_SIZE_LIMIT = 150 * 1024 * 1024
     const destination = uploadArgs.destination || `/${file}`
+
+    // TODO: remove reading file
     const buffer = await fs.readFile(file)
 
     if (buffer.length <= 0) {
@@ -50,7 +52,7 @@ export class DropboxUploader implements Uploader {
       return response.result.id
     } else {
       return this.uploadStream({
-        buffer,
+        file: file,
         destination,
         onProgress: (uploaded, total) => {
           this.logger?.info(`Uploaded ${(uploaded / total) * 100}% ${file}`)
@@ -83,73 +85,37 @@ export class DropboxUploader implements Uploader {
    * @param onProgress optional function that indicate progress
    * @returns
    */
-  uploadStream = async ({ buffer, destination, partSizeBytes = DROPBOX_MAX_BLOB_SIZE, onProgress }: StreamUploader) => {
-    if (buffer.length <= 0) {
-      this.logger?.warn(`Skip, because it size is ${buffer.length}`)
-      return ''
-    }
+  uploadStream = async ({ file, destination, partSizeBytes = DROPBOX_MAX_BLOB_SIZE, onProgress }: StreamUploader) => {
+    const fileStream = fsRaw.createReadStream(file, { highWaterMark: partSizeBytes })
 
-    const partSize = Math.min(partSizeBytes, DROPBOX_MAX_BLOB_SIZE)
+    let sessionId: string | undefined = undefined
+    let uploaded = 0
+    const size = fileStream.readableLength
 
-    const blobs = []
-    let offset = 0
-    while (offset < buffer.length) {
-      const chunkSize = Math.min(partSize, buffer.length - offset)
-      blobs.push(buffer.slice(offset, offset + chunkSize))
-      offset += chunkSize
-    }
-
-    const uploadedFileId = await blobs.reduce(async (acc, blob, index, items) => {
-      const isStartUploading = index === 0
-      if (isStartUploading) {
-        onProgress?.(0, buffer.length)
-
-        return acc.then(async () =>
-          this.dropbox.filesUploadSessionStart({ contents: blob }).then((response) => response.result.session_id),
-        )
-      } else if (index < items.length - 1) {
-        // Append part to the upload session
-
-        const offset = index * partSize
-        onProgress?.(offset, buffer.length)
-
-        return acc.then(async (sessionId: string) => {
-          return this.dropbox
-            .filesUploadSessionAppendV2({
-              // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
-              cursor: { session_id: sessionId, offset: offset },
-              contents: blob,
-            })
-            .then(() => {
-              return sessionId
-            })
-        })
+    for await (const chunk of fileStream) {
+      if (sessionId === undefined) {
+        sessionId = (await this.dropbox.filesUploadSessionStart({ contents: chunk })).result.session_id
       } else {
-        // Last chunk of data, close session
-
-        const offset = buffer.length - blob.length
-        return acc.then(async (sessionId) => {
-          return this.dropbox
-            .filesUploadSessionFinish({
-              // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
-              cursor: { session_id: sessionId, offset: offset },
-              // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
-              commit: { path: destination, mode: { '.tag': 'overwrite' }, autorename: true, mute: false },
-              contents: blob,
-            })
-            .then((it) => {
-              this.logger?.info(`result uploading: ${JSON.stringify(it.result)}`)
-              return it.result.id
-            })
+        await this.dropbox.filesUploadSessionAppendV2({
+          // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
+          cursor: { session_id: sessionId, offset: uploaded },
+          contents: chunk,
         })
       }
-    }, Promise.resolve(''))
+      onProgress?.(uploaded, size)
+      uploaded += chunk.length
+    }
+    const response = await this.dropbox.filesUploadSessionFinish({
+      // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
+      cursor: { session_id: sessionId, offset: uploaded },
+      // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
+      commit: { path: destination, mode: { '.tag': 'overwrite' } },
+      contents: '',
+    })
+    onProgress?.(uploaded, size)
 
-    onProgress?.(buffer.length, buffer.length)
-    return uploadedFileId
+    return response.result.id
   }
 
   constructor(private dropbox: Dropbox, private logger?: Logger) {}
 }
-
-// const isDropboxError = is((e) => (typeof e === 'object' && e.error && e.status ? e : undefined))

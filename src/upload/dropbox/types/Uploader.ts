@@ -1,4 +1,4 @@
 export interface Uploader {
-  buffer: Buffer
+  file: string
   destination: string
 }
