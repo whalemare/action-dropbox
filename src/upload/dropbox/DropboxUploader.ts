@@ -1,5 +1,4 @@
 import * as fsRaw from 'fs'
-import { join } from 'path'
 
 import { Dropbox } from 'dropbox'
 
@@ -50,6 +49,8 @@ export class DropboxUploader implements Uploader {
         path: destination,
         contents: buffer,
         mode: { '.tag': 'overwrite' },
+        autorename: true,
+        strict_conflict: false,
       })
       this.logger?.info(`Uploaded: ${file} with id ${response.result.id}`)
 
@@ -136,7 +137,6 @@ export class DropboxUploader implements Uploader {
     }
   }
 
-  promiseLock: undefined | Promise<any>
   /**
    * Batch file uploading
    *
@@ -149,85 +149,17 @@ export class DropboxUploader implements Uploader {
     { onProgress, partSizeBytes = DROPBOX_MAX_BLOB_SIZE }: StreamUploader = {},
   ) => {
     this.logger?.info(`Start uploading ${files.length} files`)
-    const sessions: {
-      [k in string]: {
-        sessionId: string
-        fileSize: number
-      }
-    } = {}
-    const promises = files.map(async (file) => {
-      const fileStat = fsRaw.statSync(file)
-      const fileSize = fileStat.size
-      if (fileSize > 0) {
-        const fileStream = fsRaw.createReadStream(file, { highWaterMark: partSizeBytes })
 
-        let sessionId: string | undefined = undefined
-        let uploaded = 0
-
-        for await (const chunk of fileStream) {
-          const isLastChunk = uploaded + chunk.length === fileSize
-
-          // this.logger?.debug(`
-          //   File ${file}
-          //   filesize: ${fileSize}
-          //   sessionId: ${sessionId}
-          //   uploaded: ${uploaded}
-          //   chunk: ${chunk.length}
-          //   isLastChunk: ${isLastChunk}
-          // `)
-
-          if (sessionId === undefined) {
-            await this.retryWhenTooManyRequests(async () => {
-              sessionId = (await this.dropbox.filesUploadSessionStart({ contents: chunk, close: isLastChunk })).result
-                .session_id
-              sessions[file] = {
-                sessionId: sessionId,
-                fileSize: fileSize,
-              }
-            })
-          } else {
-            await this.dropbox.filesUploadSessionAppendV2({
-              // @ts-ignore incorrect cursor typings here, that required `contents`, but crashed in runtime
-              cursor: { session_id: sessionId, offset: uploaded },
-              contents: chunk,
-              close: isLastChunk,
-            })
-          }
-          uploaded += chunk.length
-          onProgress?.(uploaded, fileSize, file)
-        }
-      }
-    })
-    await Promise.all(promises)
-
-    await this.dropbox.filesUploadSessionFinishBatch({
-      // @ts-ignore incorrect typing with contents
-      entries: files.map((file) => {
-        return {
-          commit: {
-            path: join(destination, file),
-            mode: { '.tag': 'overwrite' },
-          },
-          cursor: {
-            session_id: sessions[file].sessionId,
-            offset: sessions[file].fileSize,
-          },
-        }
-      }),
-    })
-
-    // TODO: wait processing flag
-    // console.log('response', response.result)
-
-    // let repeat = 5
-    // while (repeat-- >= 0) {
-    //   const respose = await this.dropbox.filesUploadSessionFinishBatchCheck({
-    //     // @ts-ignore
-    //     async_job_id: response.result.async_job_id,
-    //   })
-    //   console.log('response checking', JSON.stringify(respose.result))
-    //   await new Promise((r) => setTimeout(r, 2500))
-    // }
+    for await (const file of files) {
+      onProgress?.(0, 100, file)
+      await this.retryWhenTooManyRequests(async () => {
+        return this.upload({
+          file,
+          destination,
+        })
+      })
+      onProgress?.(100, 100, file)
+    }
   }
 
   retryWhenTooManyRequests = async <T>(func: () => Promise<T>) => {
@@ -236,18 +168,11 @@ export class DropboxUploader implements Uploader {
       async (error) => {
         console.warn(`error = ${JSON.stringify(error)}`)
 
-        if (this.promiseLock) {
-          await this.promiseLock
+        if (error.error?.error?.retry_after) {
+          console.warn(`Error: ${error}: wait ${error.error?.error?.retry_after}`)
+          await delay(error.error?.error?.retry_after)
         } else {
-          if (error.error?.error?.retry_after) {
-            console.warn(`Error: ${error}: wait ${error.error?.error?.retry_after}`)
-            await delay(error.error?.error?.retry_after)
-            this.promiseLock = delay(error.error?.error?.retry_after)
-            await this.promiseLock
-          } else {
-            this.promiseLock = delay(1000)
-            await this.promiseLock
-          }
+          await delay(1000)
         }
 
         return true

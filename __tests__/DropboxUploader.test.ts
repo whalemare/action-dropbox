@@ -84,10 +84,11 @@ describe('upload', () => {
         logger: console,
       })
 
-      const files = await globby('node_modules/**/*')
+      const files = await globby('artifacts/**/*')
       try {
         await uploader.uploadFiles(files.slice(0, 300), '/upload')
       } catch (e) {
+        console.error(e)
         console.error(e.error)
       }
     },

@@ -38,6 +38,7 @@ async function run() {
   if (pattern) {
     await core.group(`uploading batch ${pattern}`, async () => {
       const files = await globby(pattern)
+
       await dropbox.uploadFiles(files, destination, {
         onProgress: (current, total, file) => {
           const percent = Math.round((current / total) * 100)
