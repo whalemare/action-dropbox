@@ -82,7 +82,7 @@ run()
     core.setOutput('files', files);
 })
     .catch((e) => {
-    core.error(e);
+    core.error(e.error);
     core.setFailed(e);
 });
 
