@@ -53,10 +53,10 @@ function run() {
         const dropbox = DropboxUploader_1.DropboxUploader.create({ accessToken });
         const uploadedFiles = [];
         core.startGroup('input args');
-        core.debug(`pattern ${pattern}`);
-        core.debug(`file ${file}`);
-        core.debug(`destination ${destination}`);
-        core.debug(`displayProgress ${displayProgress ? 'true' : 'false'}`);
+        core.info(`pattern ${pattern}`);
+        core.info(`file ${file}`);
+        core.info(`destination ${destination}`);
+        core.info(`displayProgress ${displayProgress ? 'true' : 'false'}`);
         core.endGroup();
         if (pattern) {
             yield uploadBatch_1.uploadBatch(pattern, (file) => __awaiter(this, void 0, void 0, function* () {
