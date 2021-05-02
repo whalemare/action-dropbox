@@ -10,7 +10,7 @@ const { accessToken, file, destination, pattern, displayProgress = false } = get
   accessToken: 'string',
   pattern: 'string?',
   file: 'string?',
-  destination: 'string?',
+  destination: 'string',
   displayProgress: 'boolean?',
 })
 
@@ -31,7 +31,7 @@ async function run() {
         const buffer = await fs.promises.readFile(file)
         const fileId = await dropbox.uploadStream({
           buffer,
-          destination: destination || file,
+          destination: destination,
           onProgress: displayProgress
             ? (current, total) => {
                 const percent = Math.round((current / total) * 100)

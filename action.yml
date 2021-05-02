@@ -8,6 +8,9 @@ inputs:
   accessToken:
     required: true
     description: 'Dropbox access token. Create new one at: https://www.dropbox.com/developers/apps'
+  destination:
+    required: true
+    description: 'Dropbox destination path for uploading. Must be started from /". (ex. "/actions")'
   pattern:
     required: false
     description: 'glob pattern for file (ex. src/**/*)'
@@ -15,9 +18,6 @@ inputs:
   file:
     required: false
     description: 'path to specific file (ex. src/main.ts)'
-  destination:
-    required: false
-    description: 'Dropbox destination path for uploading. Must be started from /". (ex. "/actions", "/actions/main.ts")'
   displayProgress:
     required: false
     description: "Display file uploading progress logs. default: false"
