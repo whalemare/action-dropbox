@@ -159,6 +159,8 @@ exports.DropboxUploader = void 0;
 const fsRaw = __importStar(__webpack_require__(5747));
 const path_1 = __webpack_require__(5622);
 const dropbox_1 = __webpack_require__(8939);
+const delay_1 = __webpack_require__(3491);
+const retry_1 = __webpack_require__(4542);
 const fs = fsRaw.promises;
 /**
  * 8Mb - Dropbox JavaScript API suggested max file / chunk size
@@ -308,12 +310,24 @@ class DropboxUploader {
             isLastChunk: ${isLastChunk}
           `);
                             if (sessionId === undefined) {
-                                sessionId = (yield this.dropbox.filesUploadSessionStart({ contents: chunk, close: isLastChunk })).result
-                                    .session_id;
-                                sessions[file] = {
-                                    sessionId: sessionId,
-                                    fileSize: fileSize,
-                                };
+                                yield retry_1.shouldRetry(() => __awaiter(this, void 0, void 0, function* () {
+                                    sessionId = (yield this.dropbox.filesUploadSessionStart({ contents: chunk, close: isLastChunk })).result
+                                        .session_id;
+                                    sessions[file] = {
+                                        sessionId: sessionId,
+                                        fileSize: fileSize,
+                                    };
+                                }), (error) => __awaiter(this, void 0, void 0, function* () {
+                                    var _e, _f, _g, _h;
+                                    if ((_e = error.error) === null || _e === void 0 ? void 0 : _e.retry_after) {
+                                        (_f = this.logger) === null || _f === void 0 ? void 0 : _f.warn(`Error: ${error}: wait ${(_g = error.error) === null || _g === void 0 ? void 0 : _g.retry_after}`);
+                                        yield delay_1.delay((_h = error.error) === null || _h === void 0 ? void 0 : _h.retry_after);
+                                    }
+                                    else {
+                                        yield delay_1.delay(100);
+                                    }
+                                    return true;
+                                }), 5);
                             }
                             else {
                                 yield this.dropbox.filesUploadSessionAppendV2({
@@ -379,6 +393,34 @@ exports.DropboxUploader = DropboxUploader;
 
 /***/ }),
 
+/***/ 3491:
+/***/ (function(__unused_webpack_module, exports) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.delay = void 0;
+function delay(timeout = 1000) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (timeout === 0)
+            return Promise.resolve();
+        return new Promise((resolver) => setTimeout(resolver, timeout));
+    });
+}
+exports.delay = delay;
+
+
+/***/ }),
+
 /***/ 515:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -432,6 +474,48 @@ function onKey(key, onValue) {
         onValue(value);
     }
 }
+
+
+/***/ }),
+
+/***/ 4542:
+/***/ (function(__unused_webpack_module, exports) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.shouldRetry = void 0;
+/**
+ * Retry request if it failed
+ */
+function shouldRetry(requestGenerator, isShouldRetry, maxRetryCount = 3) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const countLeft = maxRetryCount - 1;
+        try {
+            const response = yield requestGenerator(countLeft);
+            return response;
+        }
+        catch (e) {
+            const needRetry = yield isShouldRetry(e);
+            if (needRetry && maxRetryCount > 0) {
+                return shouldRetry(requestGenerator, isShouldRetry, countLeft);
+            }
+            else {
+                return Promise.reject(e);
+            }
+        }
+    });
+}
+exports.shouldRetry = shouldRetry;
 
 
 /***/ }),
