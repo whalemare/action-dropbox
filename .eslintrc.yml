@@ -35,7 +35,7 @@ rules:
   i18n/no-russian-character: 'error'
   no-magic-numbers: 'off'
   no-debugger: 'error'
-  no-console: 'warn'
+  no-console: 'off'
 
   '@typescript-eslint/adjacent-overload-signatures': 'error'
   '@typescript-eslint/array-type': ['error', { default:"array-simple" }]
@@ -128,11 +128,11 @@ rules:
   'unused-imports/no-unused-vars':
     ['warn', { 'vars': 'all', 'varsIgnorePattern': '^_', 'args': 'after-used', 'argsIgnorePattern': '^_' }]
 
-  "jest/no-disabled-tests": "warn"
+  "jest/no-disabled-tests": "off"
   "jest/no-focused-tests": "warn"
   "jest/no-identical-title": "warn"
   "jest/prefer-to-have-length": "warn"
   "jest/valid-expect": "warn"
-  "jest/expect-expect": "warn"
+  "jest/expect-expect": "off"
   "jest/no-conditional-expect": "warn"
   "jest/no-done-callback": "warn"

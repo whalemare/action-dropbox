@@ -26,20 +26,22 @@ async function run() {
   core.endGroup()
 
   if (pattern) {
-    await uploadBatch(pattern, async (file) => {
-      const buffer = await fs.promises.readFile(file)
-      const fileId = await dropbox.uploadStream({
-        buffer,
-        destination: destination || file,
-        onProgress: displayProgress
-          ? (current, total) => {
-              const percent = Math.round((current / total) * 100)
-              core.info(`Uploading ${percent}%: ${file}`)
-            }
-          : undefined,
+    await core.group(`uploading batch ${pattern}`, async () => {
+      return uploadBatch(pattern, async (file) => {
+        const buffer = await fs.promises.readFile(file)
+        const fileId = await dropbox.uploadStream({
+          buffer,
+          destination: destination || file,
+          onProgress: displayProgress
+            ? (current, total) => {
+                const percent = Math.round((current / total) * 100)
+                core.info(`Uploading ${percent}%: ${file}`)
+              }
+            : undefined,
+        })
+        core.info(`Uploaded: ${file} -> ${fileId}`)
+        uploadedFiles.push(fileId)
       })
-      core.info(`Uploaded: ${file} -> ${fileId}`)
-      uploadedFiles.push(fileId)
     })
   }
 

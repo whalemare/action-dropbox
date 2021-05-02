@@ -59,20 +59,22 @@ function run() {
         core.info(`displayProgress ${displayProgress ? 'true' : 'false'}`);
         core.endGroup();
         if (pattern) {
-            yield uploadBatch_1.uploadBatch(pattern, (file) => __awaiter(this, void 0, void 0, function* () {
-                const buffer = yield fs.promises.readFile(file);
-                const fileId = yield dropbox.uploadStream({
-                    buffer,
-                    destination: destination || file,
-                    onProgress: displayProgress
-                        ? (current, total) => {
-                            const percent = Math.round((current / total) * 100);
-                            core.info(`Uploading ${percent}%: ${file}`);
-                        }
-                        : undefined,
-                });
-                core.info(`Uploaded: ${file} -> ${fileId}`);
-                uploadedFiles.push(fileId);
+            yield core.group(`uploading batch ${pattern}`, () => __awaiter(this, void 0, void 0, function* () {
+                return uploadBatch_1.uploadBatch(pattern, (file) => __awaiter(this, void 0, void 0, function* () {
+                    const buffer = yield fs.promises.readFile(file);
+                    const fileId = yield dropbox.uploadStream({
+                        buffer,
+                        destination: destination || file,
+                        onProgress: displayProgress
+                            ? (current, total) => {
+                                const percent = Math.round((current / total) * 100);
+                                core.info(`Uploading ${percent}%: ${file}`);
+                            }
+                            : undefined,
+                    });
+                    core.info(`Uploaded: ${file} -> ${fileId}`);
+                    uploadedFiles.push(fileId);
+                }));
             }));
         }
         if (file) {
