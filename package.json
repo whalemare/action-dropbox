@@ -40,7 +40,7 @@
     "@typescript-eslint/parser": "^4.8.1",
     "@vercel/ncc": "^0.25.1",
     "eslint": "7.22.0",
-    "eslint-config-prettier": "7.2.0",
+    "eslint-config-prettier": "8.3.0",
     "eslint-plugin-detox": "1.0.0",
     "eslint-plugin-github": "^4.1.1",
     "eslint-plugin-i18n": "2.0.0",
