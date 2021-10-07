@@ -153,6 +153,7 @@ export class DropboxUploader implements Uploader {
   ) => {
     this.logger?.info(`Start uploading ${files.length} files`)
 
+    let count = 0
     for await (const file of files) {
       onProgress?.(0, 100, file)
       await this.retryWhenTooManyRequests(async () => {
@@ -162,6 +163,7 @@ export class DropboxUploader implements Uploader {
         })
       })
       onProgress?.(100, 100, file)
+      this.logger?.info(`${++count}/${files.length} files uploaded`)
     }
   }
 

@@ -74,7 +74,7 @@ function run() {
         if (pattern) {
             yield core.group(`uploading batch ${pattern}`, () => __awaiter(this, void 0, void 0, function* () {
                 const files = yield globby_1.default(pattern);
-                core.info(`file list ${files}`);
+                core.info(`File list: ${files}`);
                 yield dropbox.uploadFiles(files, destination, {
                     onProgress: (current, total, file) => {
                         const percent = Math.round((current / total) * 100);
@@ -301,8 +301,9 @@ class DropboxUploader {
          */
         this.uploadFiles = (files, destination, { onProgress, partSizeBytes = DROPBOX_MAX_BLOB_SIZE } = {}) => { var files_1, files_1_1; return __awaiter(this, void 0, void 0, function* () {
             var e_2, _a;
-            var _b;
+            var _b, _c;
             (_b = this.logger) === null || _b === void 0 ? void 0 : _b.info(`Start uploading ${files.length} files`);
+            let count = 0;
             try {
                 for (files_1 = __asyncValues(files); files_1_1 = yield files_1.next(), !files_1_1.done;) {
                     const file = files_1_1.value;
@@ -314,6 +315,7 @@ class DropboxUploader {
                         });
                     }));
                     onProgress === null || onProgress === void 0 ? void 0 : onProgress(100, 100, file);
+                    (_c = this.logger) === null || _c === void 0 ? void 0 : _c.info(`${++count}/${files.length} files uploaded`);
                 }
             }
             catch (e_2_1) { e_2 = { error: e_2_1 }; }
