@@ -184,7 +184,10 @@ class DropboxUploader {
             var { file } = _a, uploadArgs = __rest(_a, ["file"]);
             // 150 Mb Dropbox restriction to max file for uploading
             const UPLOAD_FILE_SIZE_LIMIT = 150 * 1024 * 1024;
-            const destination = uploadArgs.destination || `/${file}`;
+            let destination = uploadArgs.destination || `/${file}`;
+            if (destination.endsWith('/')) {
+                destination += file;
+            }
             // TODO: remove reading file
             const buffer = yield fs_1.promises.readFile(file);
             if (buffer.length <= 0) {

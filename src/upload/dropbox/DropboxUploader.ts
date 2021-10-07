@@ -1,5 +1,5 @@
 import * as fsRaw from 'fs'
-import { promises as fs } from 'fs';
+import { promises as fs } from 'fs'
 
 import { Dropbox } from 'dropbox'
 
@@ -32,7 +32,11 @@ export class DropboxUploader implements Uploader {
   upload = async ({ file, ...uploadArgs }: UploadArgs) => {
     // 150 Mb Dropbox restriction to max file for uploading
     const UPLOAD_FILE_SIZE_LIMIT = 150 * 1024 * 1024
-    const destination = uploadArgs.destination || `/${file}`
+    let destination = uploadArgs.destination || `/${file}`
+
+    if (destination.endsWith('/')) {
+      destination += file
+    }
 
     // TODO: remove reading file
     const buffer = await fs.readFile(file)
