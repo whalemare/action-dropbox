@@ -74,6 +74,7 @@ function run() {
         if (pattern) {
             yield core.group(`uploading batch ${pattern}`, () => __awaiter(this, void 0, void 0, function* () {
                 const files = yield globby_1.default(pattern);
+                core.info(`file list ${files}`);
                 yield dropbox.uploadFiles(files, destination, {
                     onProgress: (current, total, file) => {
                         const percent = Math.round((current / total) * 100);
