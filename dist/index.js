@@ -165,10 +165,10 @@ var __asyncValues = (this && this.__asyncValues) || function (o) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DropboxUploader = void 0;
 const fsRaw = __importStar(__webpack_require__(5747));
+const fs = __importStar(__webpack_require__(9225));
 const dropbox_1 = __webpack_require__(8939);
 const delay_1 = __webpack_require__(3491);
 const retry_1 = __webpack_require__(4542);
-const fs = fsRaw.promises;
 /**
  * 8Mb - Dropbox JavaScript API suggested max file / chunk size
  */
@@ -14841,6 +14841,14 @@ module.exports = require("events");;
 
 "use strict";
 module.exports = require("fs");;
+
+/***/ }),
+
+/***/ 9225:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("fs/promises");;
 
 /***/ }),
 
