@@ -1,5 +1,5 @@
 import * as fsRaw from 'fs'
-import * as fs from 'fs/promises'
+import { promises as fs } from 'fs';
 
 import { Dropbox } from 'dropbox'
 

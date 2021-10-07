@@ -165,7 +165,7 @@ var __asyncValues = (this && this.__asyncValues) || function (o) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DropboxUploader = void 0;
 const fsRaw = __importStar(__webpack_require__(5747));
-const fs = __importStar(__webpack_require__(9225));
+const fs_1 = __webpack_require__(5747);
 const dropbox_1 = __webpack_require__(8939);
 const delay_1 = __webpack_require__(3491);
 const retry_1 = __webpack_require__(4542);
@@ -186,7 +186,7 @@ class DropboxUploader {
             const UPLOAD_FILE_SIZE_LIMIT = 150 * 1024 * 1024;
             const destination = uploadArgs.destination || `/${file}`;
             // TODO: remove reading file
-            const buffer = yield fs.readFile(file);
+            const buffer = yield fs_1.promises.readFile(file);
             if (buffer.length <= 0) {
                 (_b = this.logger) === null || _b === void 0 ? void 0 : _b.warn(`Skip file: ${file}, because it size is ${buffer.length}`);
                 return '';
@@ -14841,14 +14841,6 @@ module.exports = require("events");;
 
 "use strict";
 module.exports = require("fs");;
-
-/***/ }),
-
-/***/ 9225:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("fs/promises");;
 
 /***/ }),
 
