@@ -1,4 +1,5 @@
 import * as fsRaw from 'fs'
+import { promises as fs } from 'fs'
 
 import { Dropbox } from 'dropbox'
 
@@ -9,8 +10,6 @@ import { UploadArgs, Uploader } from '../Uploader'
 
 import { DropboxUploaderArgs } from './types/DropboxUploaderArgs'
 import { StreamUploader } from './types/StreamUploader'
-
-const fs = fsRaw.promises
 
 /**
  * 8Mb - Dropbox JavaScript API suggested max file / chunk size
@@ -33,7 +32,11 @@ export class DropboxUploader implements Uploader {
   upload = async ({ file, ...uploadArgs }: UploadArgs) => {
     // 150 Mb Dropbox restriction to max file for uploading
     const UPLOAD_FILE_SIZE_LIMIT = 150 * 1024 * 1024
-    const destination = uploadArgs.destination || `/${file}`
+    let destination = uploadArgs.destination || `/${file}`
+
+    if (destination.endsWith('/')) {
+      destination += file
+    }
 
     // TODO: remove reading file
     const buffer = await fs.readFile(file)
@@ -150,6 +153,7 @@ export class DropboxUploader implements Uploader {
   ) => {
     this.logger?.info(`Start uploading ${files.length} files`)
 
+    let count = 0
     for await (const file of files) {
       onProgress?.(0, 100, file)
       await this.retryWhenTooManyRequests(async () => {
@@ -159,6 +163,7 @@ export class DropboxUploader implements Uploader {
         })
       })
       onProgress?.(100, 100, file)
+      this.logger?.info(`${++count}/${files.length} files uploaded`)
     }
   }
 

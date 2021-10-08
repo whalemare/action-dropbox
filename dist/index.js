@@ -74,6 +74,7 @@ function run() {
         if (pattern) {
             yield core.group(`uploading batch ${pattern}`, () => __awaiter(this, void 0, void 0, function* () {
                 const files = yield globby_1.default(pattern);
+                core.info(`File list: ${files}`);
                 yield dropbox.uploadFiles(files, destination, {
                     onProgress: (current, total, file) => {
                         const percent = Math.round((current / total) * 100);
@@ -165,10 +166,10 @@ var __asyncValues = (this && this.__asyncValues) || function (o) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DropboxUploader = void 0;
 const fsRaw = __importStar(__webpack_require__(5747));
+const fs_1 = __webpack_require__(5747);
 const dropbox_1 = __webpack_require__(8939);
 const delay_1 = __webpack_require__(3491);
 const retry_1 = __webpack_require__(4542);
-const fs = fsRaw.promises;
 /**
  * 8Mb - Dropbox JavaScript API suggested max file / chunk size
  */
@@ -184,9 +185,12 @@ class DropboxUploader {
             var { file } = _a, uploadArgs = __rest(_a, ["file"]);
             // 150 Mb Dropbox restriction to max file for uploading
             const UPLOAD_FILE_SIZE_LIMIT = 150 * 1024 * 1024;
-            const destination = uploadArgs.destination || `/${file}`;
+            let destination = uploadArgs.destination || `/${file}`;
+            if (destination.endsWith('/')) {
+                destination += file;
+            }
             // TODO: remove reading file
-            const buffer = yield fs.readFile(file);
+            const buffer = yield fs_1.promises.readFile(file);
             if (buffer.length <= 0) {
                 (_b = this.logger) === null || _b === void 0 ? void 0 : _b.warn(`Skip file: ${file}, because it size is ${buffer.length}`);
                 return '';
@@ -297,8 +301,9 @@ class DropboxUploader {
          */
         this.uploadFiles = (files, destination, { onProgress, partSizeBytes = DROPBOX_MAX_BLOB_SIZE } = {}) => { var files_1, files_1_1; return __awaiter(this, void 0, void 0, function* () {
             var e_2, _a;
-            var _b;
+            var _b, _c;
             (_b = this.logger) === null || _b === void 0 ? void 0 : _b.info(`Start uploading ${files.length} files`);
+            let count = 0;
             try {
                 for (files_1 = __asyncValues(files); files_1_1 = yield files_1.next(), !files_1_1.done;) {
                     const file = files_1_1.value;
@@ -310,6 +315,7 @@ class DropboxUploader {
                         });
                     }));
                     onProgress === null || onProgress === void 0 ? void 0 : onProgress(100, 100, file);
+                    (_c = this.logger) === null || _c === void 0 ? void 0 : _c.info(`${++count}/${files.length} files uploaded`);
                 }
             }
             catch (e_2_1) { e_2 = { error: e_2_1 }; }

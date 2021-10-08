@@ -38,6 +38,7 @@ async function run() {
   if (pattern) {
     await core.group(`uploading batch ${pattern}`, async () => {
       const files = await globby(pattern)
+      core.info(`File list: ${files}`)
 
       await dropbox.uploadFiles(files, destination, {
         onProgress: (current, total, file) => {
